@@ -1,0 +1,154 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파트너 로그인</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-md p-8 bg-white rounded-xl shadow-xl">
+        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">로그인</h2>
+
+        <!-- 메시지 표시 영역 -->
+        <div id="message-container" class="mb-4"></div>
+
+        <form id="login-form" class="space-y-6">
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">이메일 주소</label>
+                <input type="email" id="email" required
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">비밀번호</label>
+                <input type="password" id="password" required
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div class="flex items-center justify-between">
+                <div class="text-sm">
+                    <a href="#" id="reset-password" class="font-medium text-indigo-600 hover:text-indigo-500">
+                        비밀번호를 잊으셨나요?
+                    </a>
+                </div>
+            </div>
+
+            <div>
+                <button type="submit" id="login-button"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    로그인
+                </button>
+            </div>
+        </form>
+
+        <p class="mt-6 text-center text-sm text-gray-600">
+            계정이 없으신가요?
+            <a href="signup.html" class="font-medium text-indigo-600 hover:text-indigo-500">
+                회원가입하기
+            </a>
+        </p>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase SDK import
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+
+        // 사장님의 Firebase 설정 정보
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
+            authDomain: "speedlanding-dc186.firebaseapp.com",
+            projectId: "speedlanding-dc186",
+            storageBucket: "speedlanding-dc186.firebasestorage.app",
+            messagingSenderId: "392587509521",
+            appId: "1:392587509521:web:2679d3da4f9bb2e23156b0",
+            measurementId: "G-ZG0N9R3LGF"
+        };
+
+        // Firebase 앱 초기화
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // DOM 요소
+        const loginForm = document.getElementById('login-form');
+        const loginButton = document.getElementById('login-button');
+        const resetPasswordLink = document.getElementById('reset-password');
+        const messageContainer = document.getElementById('message-container');
+
+        // 로그인 폼 제출 이벤트
+        loginForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            loginButton.disabled = true;
+            loginButton.textContent = '로그인 중...';
+            showMessage('processing', '로그인 중입니다...');
+
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+
+            try {
+                // 이메일과 비밀번호로 로그인
+                await signInWithEmailAndPassword(auth, email, password);
+                
+                // 로그인 성공 -> 대시보드 페이지로 이동
+                // (절대 경로 사용)
+                window.location.href = window.location.origin + '/dashboard.html';
+
+            } catch (error) {
+                // 에러 처리
+                console.error("Login Error:", error);
+                let errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+                if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
+                     errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
+                }
+                
+                showMessage('error', errorMessage);
+                loginButton.disabled = false;
+                loginButton.textContent = '로그인';
+            }
+        });
+
+        // 비밀번호 재설정 이벤트
+        resetPasswordLink.addEventListener('click', async (e) => {
+            e.preventDefault();
+            const email = document.getElementById('email').value;
+
+            if (!email) {
+                showMessage('error', '비밀번호를 재설정할 이메일 주소를 입력해 주세요.');
+                return;
+            }
+
+            try {
+                await sendPasswordResetEmail(auth, email);
+                showMessage('success', `${email} (으)로 비밀번호 재설정 링크를 보냈습니다. 이메일을 확인해 주세요.`);
+            } catch (error) {
+                console.error("Password Reset Error:", error);
+                showMessage('error', '비밀번호 재설정 이메일 전송에 실패했습니다. 이메일 주소를 확인해 주세요.');
+            }
+        });
+
+        // 메시지 표시 함수
+        function showMessage(type, message) {
+            let bgColor, textColor;
+            if (type === 'success') {
+                bgColor = 'bg-green-100';
+                textColor = 'text-green-700';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-100';
+                textColor = 'text-red-700';
+            } else {
+                bgColor = 'bg-blue-100';
+                textColor = 'text-blue-700';
+            }
+            messageContainer.innerHTML = `<div class="${bgColor} ${textColor} p-4 rounded-md">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
+

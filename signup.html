@@ -1,0 +1,195 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>파트너 회원가입</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+    </style>
+</head>
+<body class="bg-gray-100 flex items-center justify-center min-h-screen">
+
+    <div class="w-full max-w-lg p-8 bg-white rounded-xl shadow-xl">
+        <h2 class="text-3xl font-bold text-center text-gray-800 mb-8">영업 파트너 가입</h2>
+        
+        <!-- 메시지 표시 영역 -->
+        <div id="message-container" class="mb-4"></div>
+
+        <form id="signup-form" class="space-y-6">
+            
+            <div>
+                <label for="email" class="block text-sm font-medium text-gray-700">이메일 주소</label>
+                <input type="email" id="email" required
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div>
+                <label for="password" class="block text-sm font-medium text-gray-700">비밀번호</label>
+                <input type="password" id="password" required minlength="6"
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <p class="mt-1 text-xs text-gray-500">6자리 이상 입력해 주세요.</p>
+            </div>
+
+            <hr class="my-6">
+
+            <p class="text-lg font-semibold text-gray-700">파트너 정보</p>
+            
+            <div>
+                <label for="username" class="block text-sm font-medium text-gray-700">아이디 (영업 코드)</label>
+                <input type="text" id="username" required
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+                <p class="mt-1 text-xs text-gray-500">고객에게 공유할 링크 주소(ref=아이디)가 됩니다. (예: droinka)</p>
+            </div>
+            
+            <div>
+                <label for="full-name" class="block text-sm font-medium text-gray-700">성함 (예금주명)</label>
+                <input type="text" id="full-name" required
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            
+            <div>
+                <label for="bank-name" class="block text-sm font-medium text-gray-700">은행명</label>
+                <input type="text" id="bank-name" required
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+            
+            <div>
+                <label for="account-number" class="block text-sm font-medium text-gray-700">계좌번호</label>
+                <input type="text" id="account-number" required
+                       class="mt-1 block w-full px-4 py-3 border border-gray-300 rounded-md shadow-sm focus:outline-none focus:ring-indigo-500 focus:border-indigo-500">
+            </div>
+
+            <div>
+                <button type="submit" id="signup-button"
+                        class="w-full flex justify-center py-3 px-4 border border-transparent rounded-md shadow-sm text-lg font-medium text-white bg-indigo-600 hover:bg-indigo-700 focus:outline-none focus:ring-2 focus:ring-offset-2 focus:ring-indigo-500">
+                    가입 완료
+                </button>
+            </div>
+        </form>
+
+        <p class="mt-6 text-center text-sm text-gray-600">
+            이미 계정이 있으신가요?
+            <a href="index.html" class="font-medium text-indigo-600 hover:text-indigo-500">
+                로그인하기
+            </a>
+        </p>
+    </div>
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // Firebase SDK import
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        import { getFirestore, setDoc, doc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
+
+        // 사장님의 Firebase 설정 정보
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
+            authDomain: "speedlanding-dc186.firebaseapp.com",
+            projectId: "speedlanding-dc186",
+            storageBucket: "speedlanding-dc186.firebasestorage.app",
+            messagingSenderId: "392587509521",
+            appId: "1:392587509521:web:2679d3da4f9bb2e23156b0",
+            measurementId: "G-ZG0N9R3LGF"
+        };
+
+        // Firebase 앱 초기화
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+        const db = getFirestore(app);
+
+        // DOM 요소
+        const signupForm = document.getElementById('signup-form');
+        const signupButton = document.getElementById('signup-button');
+        const messageContainer = document.getElementById('message-container');
+
+        // 회원가입 폼 제출 이벤트
+        signupForm.addEventListener('submit', async (e) => {
+            e.preventDefault();
+            
+            // 버튼 비활성화 (중복 제출 방지)
+            signupButton.disabled = true;
+            signupButton.textContent = '처리 중...';
+            showMessage('processing', '회원가입을 처리 중입니다...');
+
+            // 폼 데이터 가져오기
+            const email = document.getElementById('email').value;
+            const password = document.getElementById('password').value;
+            const username = document.getElementById('username').value.trim().toLowerCase(); // 아이디 (영업 코드)
+            const fullName = document.getElementById('full-name').value;
+            const bankName = document.getElementById('bank-name').value;
+            const accountNumber = document.getElementById('account-number').value;
+
+            try {
+                // [아이디 중복 확인]
+                const usersRef = collection(db, "users");
+                const q = query(usersRef, where("username", "==", username));
+                const querySnapshot = await getDocs(q);
+
+                if (!querySnapshot.empty) {
+                    // 이미 아이디가 존재함
+                    throw new Error("이미 사용 중인 아이디(영업 코드)입니다.");
+                }
+
+                // 1. Firebase Authentication 계정 생성
+                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const user = userCredential.user;
+
+                // 2. Firestore에 영업자 상세 정보 저장 (문서 ID를 Auth UID와 동일하게 설정)
+                const userDocRef = doc(db, "users", user.uid);
+                await setDoc(userDocRef, {
+                    uid: user.uid,
+                    email: email,
+                    username: username,         // 아이디 (영업 코드)
+                    fullName: fullName,         // 성함 (예금주)
+                    bankName: bankName,         // 은행명
+                    accountNumber: accountNumber, // 계좌번호
+                    createdAt: new Date()
+                });
+
+                // 성공 메시지
+                showMessage('success', '회원가입이 완료되었습니다! 3초 후 로그인 페이지로 이동합니다.');
+                
+                // 3초 후 로그인 페이지로 이동
+                setTimeout(() => {
+                    window.location.href = window.location.origin + '/index.html';
+                }, 3000);
+
+            } catch (error) {
+                // 에러 처리
+                let errorMessage = '회원가입에 실패했습니다. 입력 정보를 확인해 주세요.';
+                if (error.code === 'auth/email-already-in-use') {
+                    errorMessage = '이미 가입된 이메일 주소입니다.';
+                } else if (error.message.includes('아이디')) {
+                    errorMessage = error.message; // "이미 사용 중인 아이디(영업 코드)입니다."
+                } else {
+                    console.error("Signup Error:", error);
+                }
+                
+                showMessage('error', errorMessage);
+                signupButton.disabled = false;
+                signupButton.textContent = '가입 완료';
+            }
+        });
+
+        // 사용자에게 메시지 보여주기 함수
+        function showMessage(type, message) {
+            let bgColor, textColor;
+            if (type === 'success') {
+                bgColor = 'bg-green-100';
+                textColor = 'text-green-700';
+            } else if (type === 'error') {
+                bgColor = 'bg-red-100';
+                textColor = 'text-red-700';
+            } else {
+                bgColor = 'bg-blue-100';
+                textColor = 'text-blue-700';
+            }
+            messageContainer.innerHTML = `<div class="${bgColor} ${textColor} p-4 rounded-md">${message}</div>`;
+        }
+    </script>
+</body>
+</html>
+
