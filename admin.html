@@ -5,149 +5,488 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <style>
-        .loader {border-top-color: #4F46E5;animation: spinner 1.5s linear infinite;}
-        @keyframes spinner {0% { transform: rotate(0deg); }100% { transform: rotate(360deg); }}
-        .modal {display: none;position: fixed;z-index: 50;left: 0;top: 0;width: 100%;height: 100%;overflow: auto;background-color: rgba(0,0,0,0.4);}
-        .modal-content {background-color: #fefefe;margin: 10% auto;padding: 30px;border: 1px solid #888;border-radius: 12px;width: 90%;max-width: 500px;box-shadow: 0 4px 6px rgba(0,0,0,0.1);}
-        .modal-body {margin: 20px 0;}
-        .modal-footer {display: flex;justify-content: flex-end;gap: 10px;margin-top: 20px;}
-        .calc-box {background: #f3f4f6;padding: 12px;border-radius: 8px;margin-top: 16px;}
-        .calc-row {display: flex;justify-content: space-between;padding: 8px 0;border-bottom: 1px solid #e5e7eb;}
-        .calc-row:last-child {border-bottom: none;font-weight: 600;font-size: 1.1em;color: #4F46E5;}
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        .modal {
+            display: none;
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 10% auto;
+            padding: 24px;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 500px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .modal-body { margin-top: 16px; margin-bottom: 16px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
+        .calc-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .calc-label { color: #6b7280; }
+        .calc-value { font-weight: 600; }
+        .calc-final { background: #f3f4f6; padding: 12px; border-radius: 0.5rem; margin-top: 12px; }
     </style>
 </head>
-<body class="bg-gray-100">
-    <div class="min-h-screen">
-        <nav class="bg-white shadow-lg">
-            <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-                <div class="flex justify-between h-16">
-                    <div class="flex items-center"><h1 class="text-2xl font-bold text-indigo-600">Admin Dashboard</h1></div>
-                    <div class="flex items-center gap-4">
-                        <span id="admin-email" class="text-sm text-gray-600"></span>
-                        <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium">로그아웃</button>
-                    </div>
-                </div>
+<body class="bg-gray-50">
+    <nav class="bg-white shadow-sm mb-8">
+        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
+            <h1 class="text-2xl font-bold text-indigo-600">Admin Dashboard</h1>
+            <div class="flex items-center gap-4">
+                <span id="userEmail" class="text-sm text-gray-600"></span>
+                <button id="logoutBtn" class="text-sm bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">로그아웃</button>
             </div>
-        </nav>
-        <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
-            <div class="px-4 py-6 sm:px-0">
-                <h2 class="text-3xl font-bold text-gray-900 mb-6">전체 DB 승인 관리</h2>
-                <p class="text-gray-600 mb-8">Tally에서 유입된 DB 목록을 확인하고 승인합니다.</p>
-                <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded relative mb-4" role="alert">
-                    <strong class="font-bold">오류!</strong><span class="block sm:inline" id="error-text"></span>
-                </div>
-                <div class="bg-white shadow-lg rounded-xl overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제출 시간</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">고객 성함</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">영업 코드</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">판매금액</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">수익률</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">최종금액</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">관리</th>
-                                </tr>
-                            </thead>
-                            <tbody id="db-table-body" class="bg-white divide-y divide-gray-200">
-                                <tr id="loading-row">
-                                    <td colspan="8" class="px-6 py-4 text-center text-gray-500">
-                                        <div class="flex justify-center items-center">
-                                            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 mr-2"></div>
-                                            데이터를 불러오는 중입니다...
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr id="no-data-row" class="hidden"><td colspan="8" class="px-6 py-4 text-center text-gray-500">아직 유입된 DB가 없습니다.</td></tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
+        </div>
+    </nav>
+
+    <div class="max-w-7xl mx-auto px-4">
+        <!-- 파트너 관리 섹션 -->
+        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
+            <h2 class="text-xl font-bold mb-4">파트너 수익률 관리</h2>
+            <p class="text-sm text-gray-600 mb-4">파트너별 수익률을 설정하세요. (입력 예: 20은 20%를 의미)</p>
+            <div id="partnersContainer" class="space-y-3">
+                <div class="text-sm text-gray-500">파트너 목록을 불러오는 중...</div>
+            </div>
+        </div>
+
+        <!-- DB 승인 관리 -->
+        <div class="bg-white rounded-xl shadow-sm p-6">
+            <h2 class="text-xl font-bold mb-4">전체 DB 승인 관리</h2>
+            <p class="text-sm text-gray-600 mb-4">Tally에서 유입된 DB 목록을 확인하고 승인합니다.</p>
+            
+            <div id="loadingArea" class="text-center py-8">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto mb-4"></div>
+                <p class="text-gray-600">데이터를 불러오는 중입니다...</p>
+            </div>
+
+            <div id="errorArea" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4"></div>
+            <div id="successArea" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4"></div>
+
+            <div id="tableContainer" class="hidden overflow-x-auto">
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제출 시간</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">고객 성함</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">영업 코드</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">판매금액</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">수익금</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">관리</th>
+                        </tr>
+                    </thead>
+                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                </table>
             </div>
         </div>
     </div>
-    <div id="approve-modal" class="modal">
+
+    <!-- 승인 모달 -->
+    <div id="approvalModal" class="modal">
         <div class="modal-content">
-            <h3 class="text-lg leading-6 font-medium text-gray-900">DB 승인 확인</h3>
+            <h3 class="text-lg font-bold mb-2">DB 승인 확인</h3>
             <div class="modal-body">
-                <p class="text-sm text-gray-500 mb-4">정말로 이 DB를 승인하시겠습니까?<br>고객명: <strong id="modal-customer-name"></strong><br>영업 코드: <strong id="modal-ref-code"></strong></p>
+                <p class="text-sm text-gray-700 mb-2">정말로 이 DB를 승인하시겠습니까?</p>
+                <p class="text-sm text-gray-600 mb-1">고객명: <span id="modalCustomerName" class="font-semibold"></span></p>
+                <p class="text-sm text-gray-600 mb-4">영업 코드: <span id="modalRefCode" class="font-semibold"></span></p>
+                
                 <div class="mb-4">
-                    <label for="sale-amount-input" class="block text-sm font-medium text-gray-700">판매금액 (원)</label>
-                    <input type="number" id="sale-amount-input" value="0" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2 mt-1" placeholder="예: 259000">
+                    <label class="block text-sm font-medium text-gray-700 mb-2">판매금액 (원)</label>
+                    <input type="number" id="saleAmountInput" 
+                           class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                           placeholder="예: 259000" min="0" step="1000">
                 </div>
-                <div class="mb-2"><span class="text-sm text-gray-600">파트너 수익률: <strong id="modal-commission-rate" class="text-indigo-600">0%</strong></span></div>
-                <div class="calc-box">
-                    <div class="calc-row"><span class="text-sm text-gray-600">수익금 (판매금액 × 수익률)</span><span class="text-sm font-medium" id="calc-commission">₩0</span></div>
-                    <div class="calc-row"><span class="text-sm text-gray-600">원천징수 (3.3%)</span><span class="text-sm font-medium text-red-600" id="calc-tax">-₩0</span></div>
-                    <div class="calc-row"><span class="text-sm">최종 정산금액</span><span class="text-sm" id="calc-final">₩0</span></div>
+
+                <div id="calculationArea" class="hidden">
+                    <div class="calc-row">
+                        <span class="calc-label">판매금액</span>
+                        <span id="calcSaleAmount" class="calc-value"></span>
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-label">수익률</span>
+                        <span id="calcCommissionRate" class="calc-value"></span>
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-label">수익금</span>
+                        <span id="calcCommission" class="calc-value text-blue-600"></span>
+                    </div>
+                    <div class="calc-row">
+                        <span class="calc-label">원천징수 (3.3%)</span>
+                        <span id="calcTax" class="calc-value text-red-600"></span>
+                    </div>
+                    <div class="calc-final">
+                        <div class="flex justify-between">
+                            <span class="font-bold text-gray-700">최종 정산금액</span>
+                            <span id="calcFinalAmount" class="font-bold text-lg text-green-600"></span>
+                        </div>
+                    </div>
                 </div>
             </div>
             <div class="modal-footer">
-                <button id="modal-cancel" type="button" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50">취소</button>
-                <button id="modal-confirm" type="button" class="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700">승인</button>
+                <button id="modalCancelBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">취소</button>
+                <button id="modalApproveBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">승인</button>
             </div>
         </div>
     </div>
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-auth.js";
-        import { getFirestore, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.7.1/firebase-firestore.js";
-        const firebaseConfig = {apiKey: "AIzaSyAPPv0oCq1OMiSt5oV-Wt2MIfzYOr6SsR0",authDomain: "tally-f9d9b.firebaseapp.com",projectId: "tally-f9d9b",storageBucket: "tally-f9d9b.firebasestorage.app",messagingSenderId: "643827486656",appId: "1:643827486656:web:29f3f74fd7b11c4e0d7237",measurementId: "G-ZG0N9R3LGF"};
+
+    <script>
+        // ==================== 설정 ====================
+        
+        const firebaseConfig = {
+          apiKey: "AIzaSyC--w7oHVu0HvqFaQ-2hSP5dN5kwjxdpIo",
+          authDomain: "brandforyou-16b6a.firebaseapp.com",
+          projectId: "brandforyou-16b6a",
+          storageBucket: "brandforyou-16b6a.firebasestorage.app",
+          messagingSenderId: "398542169527",
+          appId: "1:398542169527:web:a7c7a4ce4f7b55088dbc7a",
+          measurementId: "G-ZG0N9R3LGF"
+        };
+        
         const GAS_URL = "/.netlify/functions/sheets-proxy";
         const ADMIN_EMAIL = "jsicoffee@naver.com";
-        try{const app = initializeApp(firebaseConfig);window.auth = getAuth(app);window.db = getFirestore(app);}catch(error){console.error("Firebase 초기화 오류:", error);alert("Firebase 초기화 실패: " + error.message);}
-        const adminEmail = document.getElementById('admin-email');
-        const logoutBtn = document.getElementById('logout-btn');
-        const dbTableBody = document.getElementById('db-table-body');
-        const loadingRow = document.getElementById('loading-row');
-        const noDataRow = document.getElementById('no-data-row');
-        const errorMessage = document.getElementById('error-message');
-        const errorText = document.getElementById('error-text');
-        const approveModal = document.getElementById('approve-modal');
-        const modalCustomerName = document.getElementById('modal-customer-name');
-        const modalRefCode = document.getElementById('modal-ref-code');
-        const modalCommissionRate = document.getElementById('modal-commission-rate');
-        const saleAmountInput = document.getElementById('sale-amount-input');
-        const calcCommission = document.getElementById('calc-commission');
-        const calcTax = document.getElementById('calc-tax');
-        const calcFinal = document.getElementById('calc-final');
-        const modalCancel = document.getElementById('modal-cancel');
-        const modalConfirm = document.getElementById('modal-confirm');
-        let currentRowNumber = null;
-        let currentCommissionRate = 0;
-        onAuthStateChanged(window.auth, async (user) => {
-            if (user) {
-                if (user.email !== ADMIN_EMAIL) {alert("관리자만 접근할 수 있습니다.");await signOut(window.auth);window.location.href = '/index.html';return;}
-                adminEmail.textContent = user.email;loadAllDbs();
-            } else {window.location.href = '/index.html';}
-        });
-        logoutBtn.addEventListener('click', async () => {try{await signOut(window.auth);window.location.href = '/index.html';}catch(error){console.error("로그아웃 오류:", error);alert("로그아웃 실패: " + error.message);}});
-        async function loadAllDbs() {errorMessage.classList.add('hidden');dbTableBody.innerHTML = '';dbTableBody.appendChild(loadingRow);try{const response = await fetch(`${GAS_URL}?action=getAllDbs&cachebust=${new Date().getTime()}`);const result = await response.json();if (result.success) {await displayDbs(result.data);} else {throw new Error(result.message);}}catch(error){console.error("데이터 로드 오류:", error);showError(error.message);}}
-        async function getPartnerCommissionRate(referralCode) {try{const partnersRef = collection(window.db, 'partners');const q = query(partnersRef, where('referralCode', '==', referralCode));const querySnapshot = await getDocs(q);if (!querySnapshot.empty) {const partnerData = querySnapshot.docs[0].data();return partnerData.commissionRate || 20;}return 20;}catch(error){console.error("수익률 조회 오류:", error);return 20;}}
-        async function displayDbs(dbs) {loadingRow.classList.add('hidden');dbTableBody.innerHTML = '';if (dbs.length === 0) {dbTableBody.appendChild(noDataRow);noDataRow.classList.remove('hidden');return;}
-            dbs.sort((a, b) => {const dateA = a.submittedAt ? new Date(a.submittedAt.replace('오전', 'AM').replace('오후', 'PM')) : new Date(0);const dateB = b.submittedAt ? new Date(b.submittedAt.replace('오전', 'AM').replace('오후', 'PM')) : new Date(0);return dateB - dateA;});
-            for (const db of dbs) {
-                const tr = document.createElement('tr');tr.className = (db.status === '승인됨') ? 'bg-green-50' : '';
-                let submittedDate = "N/A";if (db.submittedAt) {try{const dateStr = db.submittedAt.replace('오전', 'AM').replace('오후', 'PM');submittedDate = new Date(dateStr).toLocaleString('ko-KR', { year: 'numeric', month: '2-digit', day: '2-digit', hour: '2-digit', minute: '2-digit', hour12: false });}catch(e){submittedDate = db.submittedAt;}}
-                const saleAmountFormatted = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(db.saleAmount || 0);
-                const finalAmountFormatted = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(db.finalAmount || 0);
-                const commissionRateText = `${db.commissionRate || 0}%`;
-                let statusBadge;if (db.status === '승인됨') {statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">승인됨</span>`;} else if (db.status === '취소됨') {statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">취소됨</span>`;} else {statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">대기중</span>`;}
-                let actionButton;if (db.status === '승인됨') {actionButton = `<button data-row="${db.rowNumber}" data-name="${db.customerName}" data-ref="${db.referralCode}" data-sale="${db.saleAmount || 0}" data-rate="${db.commissionRate || 0}" class="edit-btn bg-gray-500 hover:bg-gray-600 text-white px-3 py-1 rounded-md text-xs font-medium">수정</button>`;} else {actionButton = `<button data-row="${db.rowNumber}" data-name="${db.customerName}" data-ref="${db.referralCode}" class="approve-btn bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md text-xs font-medium">승인</button>`;}
-                tr.innerHTML = `<td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${submittedDate}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${db.customerName || 'N/A'}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${db.referralCode || 'N/A'}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${saleAmountFormatted}</td><td class="px-6 py-4 whitespace-nowrap text-sm text-gray-600">${commissionRateText}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-indigo-600">${finalAmountFormatted}</td><td class="px-6 py-4 whitespace-nowrap">${statusBadge}</td><td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${actionButton}</td>`;
-                dbTableBody.appendChild(tr);
-            }
-            document.querySelectorAll('.approve-btn, .edit-btn').forEach(btn => {btn.addEventListener('click', async (e) => {const button = e.target;currentRowNumber = button.getAttribute('data-row');const customerName = button.getAttribute('data-name');const refCode = button.getAttribute('data-ref');currentCommissionRate = await getPartnerCommissionRate(refCode);modalCustomerName.textContent = customerName;modalRefCode.textContent = refCode;modalCommissionRate.textContent = `${currentCommissionRate}%`;if (button.classList.contains('edit-btn')) {const saleAmount = button.getAttribute('data-sale');saleAmountInput.value = saleAmount || 0;updateCalculation();} else {saleAmountInput.value = 0;updateCalculation();}approveModal.style.display = 'block';});});
+        const TAX_RATE = 0.033; // 3.3%
+
+        try {
+          firebase.initializeApp(firebaseConfig);
+          console.log("✅ Firebase 초기화 성공");
+        } catch (error) {
+          console.error("❌ Firebase 초기화 오류:", error);
+          alert("Firebase 초기화에 실패했습니다. 페이지를 새로고침해주세요.");
         }
-        function updateCalculation() {const saleAmount = parseFloat(saleAmountInput.value) || 0;const commissionRate = currentCommissionRate / 100;const taxRate = 0.033;const commission = Math.round(saleAmount * commissionRate);const tax = Math.round(commission * taxRate);const finalAmount = commission - tax;calcCommission.textContent = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(commission);calcTax.textContent = '-' + new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(tax);calcFinal.textContent = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' }).format(finalAmount);}
-        saleAmountInput.addEventListener('input', updateCalculation);
-        modalCancel.addEventListener('click', () => {approveModal.style.display = 'none';});
-        window.addEventListener('click', (event) => {if (event.target == approveModal) {approveModal.style.display = 'none';}});
-        modalConfirm.addEventListener('click', async () => {const status = '승인됨';const saleAmount = parseFloat(saleAmountInput.value) || 0;const commissionRate = currentCommissionRate;const rowNumber = currentRowNumber;if (saleAmount <= 0) {alert('판매금액을 입력해주세요.');return;}modalConfirm.disabled = true;modalConfirm.textContent = '처리중...';try{const response = await fetch(GAS_URL, {method: 'POST',body: JSON.stringify({action: 'updateDbStatus',rowNumber: rowNumber,status: status,saleAmount: saleAmount,commissionRate: commissionRate}),headers: {'Content-Type': 'application/json'}});const result = await response.json();if (result.success) {approveModal.style.display = 'none';loadAllDbs();} else {throw new Error(result.message);}}catch(error){console.error("승인 처리 오류:", error);alert("승인 처리 실패: " + error.message);}finally{modalConfirm.disabled = false;modalConfirm.textContent = '승인';}});
-        function showError(message) {loadingRow.classList.add('hidden');noDataRow.classList.add('hidden');dbTableBody.innerHTML = '';errorText.textContent = message;errorMessage.classList.remove('hidden');}
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        let currentUser = null;
+        let allDbs = [];
+        let partnersData = {};
+        let currentApprovalData = null;
+
+        // ==================== 로그인 체크 ====================
+        auth.onAuthStateChanged((user) => {
+            if (user) {
+                currentUser = user;
+                document.getElementById('userEmail').textContent = user.email;
+                
+                if (user.email !== ADMIN_EMAIL) {
+                    alert("관리자 권한이 없습니다.");
+                    auth.signOut();
+                    window.location.href = "index.html";
+                    return;
+                }
+                
+                loadPartnersData();
+                loadAllDbs();
+            } else {
+                window.location.href = "index.html";
+            }
+        });
+
+        // ==================== 로그아웃 ====================
+        document.getElementById('logoutBtn').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = "index.html";
+            });
+        });
+
+        // ==================== 파트너 데이터 로드 ====================
+        async function loadPartnersData() {
+            try {
+                const snapshot = await db.collection('users').where('referralCode', '!=', null).get();
+                const container = document.getElementById('partnersContainer');
+                container.innerHTML = '';
+
+                if (snapshot.empty) {
+                    container.innerHTML = '<div class="text-sm text-gray-500">등록된 파트너가 없습니다.</div>';
+                    return;
+                }
+
+                snapshot.forEach(doc => {
+                    const data = doc.data();
+                    if (!data.referralCode) return; // referralCode가 없으면 스킵
+                    
+                    partnersData[data.referralCode] = {
+                        id: doc.id,
+                        email: data.email,
+                        commissionRate: data.commissionRate || 20
+                    };
+
+                    const partnerDiv = document.createElement('div');
+                    partnerDiv.className = 'flex items-center justify-between p-3 bg-gray-50 rounded-lg';
+                    partnerDiv.innerHTML = `
+                        <div>
+                            <div class="font-medium">${data.email}</div>
+                            <div class="text-xs text-gray-500">코드: ${data.referralCode}</div>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <input type="number" 
+                                   value="${data.commissionRate || 20}" 
+                                   min="0" max="100" step="1"
+                                   data-partner-id="${doc.id}"
+                                   data-ref-code="${data.referralCode}"
+                                   class="w-20 px-2 py-1 text-sm border border-gray-300 rounded focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                   placeholder="20">
+                            <span class="text-sm text-gray-600">%</span>
+                            <button onclick="updateCommissionRate('${doc.id}', '${data.referralCode}')" 
+                                    class="px-3 py-1 text-sm bg-indigo-600 text-white rounded hover:bg-indigo-700 transition">
+                                저장
+                            </button>
+                        </div>
+                    `;
+                    container.appendChild(partnerDiv);
+                });
+
+            } catch (error) {
+                console.error("파트너 데이터 로드 실패:", error);
+                document.getElementById('partnersContainer').innerHTML = 
+                    '<div class="text-sm text-red-500">파트너 데이터를 불러오는데 실패했습니다.</div>';
+            }
+        }
+
+        // ==================== 수익률 업데이트 ====================
+        window.updateCommissionRate = async function(partnerId, refCode) {
+            const input = document.querySelector(`input[data-partner-id="${partnerId}"]`);
+            const rate = parseInt(input.value);
+
+            if (isNaN(rate) || rate < 0 || rate > 100) {
+                alert('수익률은 0~100 사이의 숫자여야 합니다.');
+                return;
+            }
+
+            try {
+                await db.collection('users').doc(partnerId).update({
+                    commissionRate: rate
+                });
+
+                partnersData[refCode].commissionRate = rate;
+                showSuccess(`수익률이 ${rate}%로 업데이트되었습니다.`);
+            } catch (error) {
+                console.error('수익률 업데이트 실패:', error);
+                alert('수익률 업데이트에 실패했습니다.');
+            }
+        };
+
+        // ==================== DB 목록 로드 ====================
+        async function loadAllDbs() {
+            try {
+                showLoading(true);
+                hideError();
+                hideSuccess();
+
+                const response = await fetch(`${GAS_URL}?action=getAllDbs`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.message || "데이터를 불러올 수 없습니다.");
+                }
+
+                allDbs = result.data;
+                renderTable();
+                showLoading(false);
+
+            } catch (error) {
+                console.error("DB 로드 실패:", error);
+                showError("데이터를 불러오는데 실패했습니다: " + error.message);
+                showLoading(false);
+            }
+        }
+
+        // ==================== 테이블 렌더링 ====================
+        function renderTable() {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+
+            if (allDbs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-4 text-center text-gray-500">아직 유입된 DB가 없습니다.</td></tr>';
+                document.getElementById('tableContainer').classList.remove('hidden');
+                return;
+            }
+
+            allDbs.forEach(db => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                const statusClass = db.status === '승인됨' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                const statusText = db.status || '대기중';
+                
+                const saleAmount = db.saleAmount ? `₩${parseInt(db.saleAmount).toLocaleString()}` : '미입력';
+                const finalAmount = db.finalAmount ? `₩${parseInt(db.finalAmount).toLocaleString()}` : '₩0';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 text-sm text-gray-900">${db.submittedAt || 'N/A'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${db.customerName || 'N/A'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${db.referralCode || 'N/A'}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${saleAmount}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${finalAmount}</td>
+                    <td class="px-6 py-4">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${statusClass}">
+                            ${statusText}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button onclick="openApprovalModal(${db.rowNumber})" 
+                                class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                            ${db.status === '승인됨' ? '수정' : '승인'}
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('tableContainer').classList.remove('hidden');
+        }
+
+        // ==================== 승인 모달 ====================
+        window.openApprovalModal = function(rowNumber) {
+            const db = allDbs.find(d => d.rowNumber === rowNumber);
+            if (!db) return;
+
+            currentApprovalData = {
+                rowNumber: rowNumber,
+                customerName: db.customerName,
+                referralCode: db.referralCode,
+                commissionRate: partnersData[db.referralCode]?.commissionRate || 20,
+                saleAmount: db.saleAmount || 0
+            };
+
+            document.getElementById('modalCustomerName').textContent = db.customerName || 'N/A';
+            document.getElementById('modalRefCode').textContent = db.referralCode || 'N/A';
+            document.getElementById('saleAmountInput').value = db.saleAmount || '';
+            
+            if (db.saleAmount) {
+                calculateAndShow();
+            } else {
+                document.getElementById('calculationArea').classList.add('hidden');
+            }
+
+            document.getElementById('approvalModal').style.display = 'block';
+        };
+
+        // 판매금액 입력 시 자동 계산
+        document.getElementById('saleAmountInput').addEventListener('input', function() {
+            const saleAmount = parseInt(this.value);
+            if (saleAmount > 0) {
+                calculateAndShow();
+            } else {
+                document.getElementById('calculationArea').classList.add('hidden');
+            }
+        });
+
+        function calculateAndShow() {
+            const saleAmount = parseInt(document.getElementById('saleAmountInput').value) || 0;
+            if (saleAmount <= 0) return;
+
+            const commissionRate = currentApprovalData.commissionRate / 100;
+            const commission = Math.round(saleAmount * commissionRate);
+            const tax = Math.round(commission * TAX_RATE);
+            const finalAmount = commission - tax;
+
+            document.getElementById('calcSaleAmount').textContent = `₩${saleAmount.toLocaleString()}`;
+            document.getElementById('calcCommissionRate').textContent = `${currentApprovalData.commissionRate}%`;
+            document.getElementById('calcCommission').textContent = `₩${commission.toLocaleString()}`;
+            document.getElementById('calcTax').textContent = `-₩${tax.toLocaleString()}`;
+            document.getElementById('calcFinalAmount').textContent = `₩${finalAmount.toLocaleString()}`;
+
+            document.getElementById('calculationArea').classList.remove('hidden');
+        }
+
+        document.getElementById('modalCancelBtn').addEventListener('click', () => {
+            document.getElementById('approvalModal').style.display = 'none';
+            currentApprovalData = null;
+        });
+
+        document.getElementById('modalApproveBtn').addEventListener('click', async () => {
+            const saleAmount = parseInt(document.getElementById('saleAmountInput').value);
+            
+            if (!saleAmount || saleAmount <= 0) {
+                alert('판매금액을 입력해주세요.');
+                return;
+            }
+
+            const commissionRate = currentApprovalData.commissionRate;
+            const commission = Math.round(saleAmount * (commissionRate / 100));
+            const tax = Math.round(commission * TAX_RATE);
+            const finalAmount = commission - tax;
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'updateDbStatus',
+                        rowNumber: currentApprovalData.rowNumber,
+                        status: '승인됨',
+                        saleAmount: saleAmount,
+                        commissionRate: commissionRate,
+                        commission: commission,
+                        withholdingTax: tax,
+                        finalAmount: finalAmount
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    document.getElementById('approvalModal').style.display = 'none';
+                    showSuccess('승인이 완료되었습니다!');
+                    loadAllDbs();
+                } else {
+                    throw new Error(result.message || '승인 실패');
+                }
+            } catch (error) {
+                console.error('승인 실패:', error);
+                alert('승인에 실패했습니다: ' + error.message);
+            }
+        });
+
+        // ==================== UI 헬퍼 ====================
+        function showLoading(show) {
+            document.getElementById('loadingArea').classList.toggle('hidden', !show);
+        }
+
+        function showError(message) {
+            const errorArea = document.getElementById('errorArea');
+            errorArea.textContent = message;
+            errorArea.classList.remove('hidden');
+        }
+
+        function hideError() {
+            document.getElementById('errorArea').classList.add('hidden');
+        }
+
+        function showSuccess(message) {
+            const successArea = document.getElementById('successArea');
+            successArea.textContent = message;
+            successArea.classList.remove('hidden');
+            setTimeout(() => successArea.classList.add('hidden'), 3000);
+        }
+
+        function hideSuccess() {
+            document.getElementById('successArea').classList.add('hidden');
+        }
     </script>
 </body>
 </html>

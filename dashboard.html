@@ -183,18 +183,24 @@
                 document.getElementById('nav-user').classList.remove('hidden');
                 
                 try {
-                    const doc = await db.collection('partners').doc(user.uid).get();
+                    const doc = await db.collection('users').doc(user.uid).get();
                     if (doc.exists) {
                         const data = doc.data();
                         myReferralCode = data.referralCode;
+                        
+                        if (!myReferralCode) {
+                            showError('referralCode가 설정되지 않았습니다.');
+                            return;
+                        }
+                        
                         document.getElementById('ref-link').value = `${BASE_URL}?ref=${myReferralCode}`;
                         await loadMyDbs();
                     } else {
-                        showError('파트너 정보를 찾을 수 없습니다.');
+                        showError('사용자 정보를 찾을 수 없습니다.');
                     }
                 } catch (error) {
-                    console.error('파트너 정보 로드 실패:', error);
-                    showError('파트너 정보를 불러올 수 없습니다.');
+                    console.error('사용자 정보 로드 실패:', error);
+                    showError('사용자 정보를 불러올 수 없습니다.');
                 }
             } else {
                 window.location.href = "index.html";
