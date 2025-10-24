@@ -27,7 +27,6 @@
 </head>
 <body class="bg-gray-100 min-h-screen">
 
-    <!-- 상단 네비게이션 -->
     <nav class="bg-white shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
@@ -44,31 +43,25 @@
         </div>
     </nav>
 
-    <!-- 메인 컨텐츠 -->
     <div id="main-container" class="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
         
-        <!-- 로딩 스피너 (전체) -->
         <div id="loading-spinner" class="flex justify-center items-center h-[70vh]">
             <div class="flex flex-col items-center">
                 <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-24 w-24 mb-4"></div>
                 <h2 class="text-xl font-semibold text-gray-600">데이터를 불러오는 중입니다...</h2>
-                <p class="text-gray-500">잠시만 기다려주세요.</p>
             </div>
         </div>
         
-        <!-- 대시보드 컨텐츠 (초기 숨김) -->
         <div id="dashboard-content" class="hidden">
-            <!-- 에러 메시지 표시줄 -->
             <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
                 <strong class="font-bold">데이터 로드 실패:</strong>
                 <span id="error-text" class="block sm:inline"></span>
             </div>
 
-            <!-- 헤더 -->
             <header class="mb-8 md:flex md:items-center md:justify-between">
                 <div>
                     <h2 id="welcome-title" class="text-3xl font-bold leading-7 text-gray-900 sm:text-4xl sm:truncate">
-                        ...님의 대시보드
+                        파트너님의 대시보드
                     </h2>
                     <p class="mt-1 text-lg text-gray-500">파트너님의 실적을 확인하세요.</p>
                 </div>
@@ -83,31 +76,49 @@
                 </div>
             </header>
 
-            <!-- 1. 수익 현황 -->
+            <!-- 수익 현황 -->
             <section class="mb-10">
                 <h3 class="text-2xl font-semibold text-gray-900 mb-4">수익 현황</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <!-- 이번 달 승인 수익 -->
+                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500 truncate">이번 달 승인 수익</h4>
-                        <p id="current-month-commission" class="mt-2 text-4xl font-bold text-indigo-600">₩0</p>
-                        <p id="prev-month-comparison" class="mt-1 text-sm text-gray-500">지난 달 실적 없음</p>
+                        <h4 class="text-sm font-medium text-gray-500">이번 달 총 판매액</h4>
+                        <p id="current-month-sales" class="mt-2 text-3xl font-bold text-gray-900">₩0</p>
                     </div>
-                    <!-- 누적 총 승인 수익 -->
                     <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500 truncate">누적 총 승인 수익</h4>
-                        <p id="total-commission" class="mt-2 text-4xl font-bold text-gray-900">₩0</p>
+                        <h4 class="text-sm font-medium text-gray-500">이번 달 총 수익금</h4>
+                        <p id="current-month-commission" class="mt-2 text-3xl font-bold text-blue-600">₩0</p>
+                        <p class="text-xs text-gray-500 mt-1">원천징수 전</p>
                     </div>
-                    <!-- 이번 달 총 DB 유입 -->
                     <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500 truncate">이번 달 총 DB 유입</h4>
-                        <p id="current-month-dbs" class="mt-2 text-4xl font-bold text-gray-900">0 건</p>
-                        <p id="total-dbs" class="mt-1 text-sm text-gray-500">(누적 0 건)</p>
+                        <h4 class="text-sm font-medium text-gray-500">원천징수 합계</h4>
+                        <p id="current-month-tax" class="mt-2 text-3xl font-bold text-red-600">₩0</p>
+                        <p class="text-xs text-gray-500 mt-1">3.3%</p>
+                    </div>
+                    <div class="bg-white shadow-lg rounded-xl p-6">
+                        <h4 class="text-sm font-medium text-gray-500">최종 정산 예정액</h4>
+                        <p id="current-month-final" class="mt-2 text-3xl font-bold text-green-600">₩0</p>
                     </div>
                 </div>
             </section>
 
-            <!-- 2. 내 DB 목록 -->
+            <!-- DB 유입 현황 -->
+            <section class="mb-10">
+                <h3 class="text-2xl font-semibold text-gray-900 mb-4">DB 유입 현황</h3>
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                    <div class="bg-white shadow-lg rounded-xl p-6">
+                        <h4 class="text-sm font-medium text-gray-500">이번 달 총 DB 유입</h4>
+                        <p id="current-month-db-count" class="mt-2 text-4xl font-bold text-gray-900">0 건</p>
+                        <p id="current-month-db-detail" class="mt-1 text-sm text-gray-500">(승인 0건)</p>
+                    </div>
+                    <div class="bg-white shadow-lg rounded-xl p-6">
+                        <h4 class="text-sm font-medium text-gray-500">누적 총 DB 유입</h4>
+                        <p id="total-db-count" class="mt-2 text-4xl font-bold text-gray-900">0 건</p>
+                        <p id="total-db-detail" class="mt-1 text-sm text-gray-500">(승인 0건)</p>
+                    </div>
+                </div>
+            </section>
+
+            <!-- DB 목록 -->
             <section>
                 <h3 class="text-2xl font-semibold text-gray-900 mb-4">내 DB 목록 (최신순)</h3>
                 <div class="bg-white shadow-lg rounded-xl overflow-hidden">
@@ -115,25 +126,17 @@
                         <table class="min-w-full divide-y divide-gray-200">
                             <thead class="bg-gray-50">
                                 <tr>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제출 시간</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">고객 성함</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
-                                    <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수익금</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제출 시간</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">고객 성함</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">판매금액</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수익금</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">최종금액</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
                                 </tr>
                             </thead>
-                            <tbody id="db-table-body" class="bg-white divide-y divide-gray-200">
-                                <tr id="loading-row">
-                                    <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                                        <div class="flex justify-center items-center">
-                                            <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 mr-2"></div>
-                                            데이터를 불러오는 중입니다...
-                                        </div>
-                                    </td>
-                                </tr>
-                                <tr id="no-data-row" class="hidden">
-                                    <td colspan="4" class="px-6 py-4 text-center text-gray-500">
-                                        아직 유입된 DB가 없습니다.
-                                    </td>
+                            <tbody id="db-list-tbody" class="bg-white divide-y divide-gray-200">
+                                <tr>
+                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">아직 유입된 DB가 없습니다.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -144,291 +147,193 @@
     </div>
 
     <script>
-        // (!!!!) 1. Firebase 구성 (사장님 프로젝트 값)
+        // ==================== 설정 ====================
+        
         const firebaseConfig = {
-          apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
-          authDomain: "speedlanding-dc186.firebaseapp.com",
-          projectId: "speedlanding-dc186",
-          storageBucket: "speedlanding-dc186.firebasestorage.app",
-          messagingSenderId: "392587509521",
-          appId: "1:392587509521:web:2679d3da4f9bb2e23156b0",
+          apiKey: "AIzaSyC--w7oHVu0HvqFaQ-2hSP5dN5kwjxdpIo",
+          authDomain: "brandforyou-16b6a.firebaseapp.com",
+          projectId: "brandforyou-16b6a",
+          storageBucket: "brandforyou-16b6a.firebasestorage.app",
+          messagingSenderId: "398542169527",
+          appId: "1:398542169527:web:a7c7a4ce4f7b55088dbc7a",
           measurementId: "G-ZG0N9R3LGF"
         };
         
-        // (!!!!) 2. Apps Script API 주소 (가장 최신 URL)
         const GAS_URL = "/.netlify/functions/sheets-proxy";
-
-        // (!!!!) 3. Tally 폼이 설치된 기본 URL
         const BASE_URL = "https://brandforyou.kr";
 
-        // --- Firebase 초기화 ---
         try {
-            firebase.initializeApp(firebaseConfig);
-        } catch (e) {
-            console.error("Firebase 초기화 오류:", e);
+          firebase.initializeApp(firebaseConfig);
+        } catch (error) {
+          console.error("Firebase 초기화 오류:", error);
         }
 
         const auth = firebase.auth();
         const db = firebase.firestore();
 
-        // --- DOM 요소 ---
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const dashboardContent = document.getElementById('dashboard-content');
-        const navUser = document.getElementById('nav-user');
-        const userEmail = document.getElementById('user-email');
-        const logoutButton = document.getElementById('logout-button');
-        
-        const welcomeTitle = document.getElementById('welcome-title');
-        const refLinkInput = document.getElementById('ref-link');
-        const copyLinkButton = document.getElementById('copy-link-button');
-        
-        const currentMonthCommission = document.getElementById('current-month-commission');
-        const prevMonthComparison = document.getElementById('prev-month-comparison');
-        const totalCommission = document.getElementById('total-commission');
-        const currentMonthDbs = document.getElementById('current-month-dbs');
-        const totalDbs = document.getElementById('total-dbs');
-        
-        const dbTableBody = document.getElementById('db-table-body');
-        const loadingRow = document.getElementById('loading-row');
-        const noDataRow = document.getElementById('no-data-row');
-        
-        const errorMessage = document.getElementById('error-message');
-        const errorText = document.getElementById('error-text');
+        let currentUser = null;
+        let myDbs = [];
+        let myReferralCode = null;
 
-        // --- Firebase 인증 상태 리스너 ---
-        auth.onAuthStateChanged(user => {
+        // ==================== 로그인 체크 ====================
+        auth.onAuthStateChanged(async (user) => {
             if (user) {
-                // 로그인 상태
-                navUser.classList.remove('hidden');
-                userEmail.textContent = user.email;
-                // 사용자 정보 및 DB 데이터 로드
-                loadUserData(user);
+                currentUser = user;
+                document.getElementById('user-email').textContent = user.email;
+                document.getElementById('nav-user').classList.remove('hidden');
+                
+                try {
+                    const doc = await db.collection('partners').doc(user.uid).get();
+                    if (doc.exists) {
+                        const data = doc.data();
+                        myReferralCode = data.referralCode;
+                        document.getElementById('ref-link').value = `${BASE_URL}?ref=${myReferralCode}`;
+                        await loadMyDbs();
+                    } else {
+                        showError('파트너 정보를 찾을 수 없습니다.');
+                    }
+                } catch (error) {
+                    console.error('파트너 정보 로드 실패:', error);
+                    showError('파트너 정보를 불러올 수 없습니다.');
+                }
             } else {
-                // 로그아웃 상태
-                window.location.href = window.location.origin + '/index.html';
+                window.location.href = "index.html";
             }
         });
 
-        // --- 로그아웃 버튼 ---
-        logoutButton.addEventListener('click', () => {
-            auth.signOut().catch(error => console.error("로그아웃 오류:", error));
+        // ==================== 로그아웃 ====================
+        document.getElementById('logout-button').addEventListener('click', () => {
+            auth.signOut().then(() => {
+                window.location.href = "index.html";
+            });
         });
 
-        // --- 사용자 정보 및 DB 로드 함수 ---
-        async function loadUserData(user) {
+        // ==================== 링크 복사 ====================
+        document.getElementById('copy-link-button').addEventListener('click', () => {
+            const linkInput = document.getElementById('ref-link');
+            linkInput.select();
+            document.execCommand('copy');
+            alert('영업 링크가 복사되었습니다!');
+        });
+
+        // ==================== DB 데이터 로드 ====================
+        async function loadMyDbs() {
             try {
-                // 1. Firestore에서 사용자 정보 가져오기 (이름, 영업코드)
-                const userDoc = await db.collection('users').doc(user.uid).get();
-                if (!userDoc.exists) {
-                    throw new Error("Firestore에서 사용자 정보를 찾을 수 없습니다.");
-                }
-                const userData = userDoc.data();
-                const userName = userData.name || "파트너";
-                const refCode = userData.username; // 이게 바로 referral_code
-
-                if (!refCode) {
-                    throw new Error("사용자 정보에 영업 코드(username)가 없습니다.");
-                }
-
-                // 2. UI 업데이트 (이름, 영업 링크)
-                welcomeTitle.textContent = `${userName}님의 대시보드`;
-                refLinkInput.value = `${BASE_URL}/?ref=${refCode}`;
-
-                // 3. GAS에서 이 영업자의 DB 데이터 가져오기 (!!!!) 수정됨: getDbsByRef 액션 사용
-                const response = await fetch(`${GAS_URL}?action=getDbsByRef&ref=${refCode}&cachebust=${new Date().getTime()}`);
+                const response = await fetch(`${GAS_URL}?action=getDbsByRef&ref=${myReferralCode}`);
                 const result = await response.json();
 
                 if (!result.success) {
-                    throw new Error(result.message);
+                    throw new Error(result.message || "데이터를 불러올 수 없습니다.");
                 }
-                
-                // 4. 데이터 분석 및 표시
-                analyzeAndDisplayData(result.data);
-                
-                // 5. 로딩 숨기고 대시보드 표시
-                loadingSpinner.classList.add('hidden');
-                dashboardContent.classList.remove('hidden');
+
+                myDbs = result.data;
+                renderDashboard();
+                document.getElementById('loading-spinner').classList.add('hidden');
+                document.getElementById('dashboard-content').classList.remove('hidden');
 
             } catch (error) {
-                console.error("데이터 로드 오류:", error);
-                showError(error.message);
-                loadingSpinner.classList.add('hidden'); // 로딩 숨기기
-                dashboardContent.classList.remove('hidden'); // 대시보드 표시 (에러 메시지 보여주기 위함)
+                console.error("DB 로드 실패:", error);
+                showError("데이터를 불러오는데 실패했습니다: " + error.message);
+                document.getElementById('loading-spinner').classList.add('hidden');
+                document.getElementById('dashboard-content').classList.remove('hidden');
             }
         }
 
-        // --- 데이터 분석 및 표시 함수 ---
-        function analyzeAndDisplayData(dbs) {
+        // ==================== 대시보드 렌더링 ====================
+        function renderDashboard() {
             const now = new Date();
+            const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth(); // 0 = 1월, 11 = 12월
-            
-            // 지난 달 계산
-            const prevMonthDate = new Date(now);
-            prevMonthDate.setMonth(prevMonthDate.getMonth() - 1);
-            const prevMonthYear = prevMonthDate.getFullYear();
-            const prevMonth = prevMonthDate.getMonth();
 
-            let totalComm = 0;
-            let currentMonthComm = 0;
-            let prevMonthComm = 0;
-            let currentMonthDbCount = 0;
-            const totalDbCount = dbs.length;
+            // 이번 달 데이터 계산
+            let currentMonthSales = 0;
+            let currentMonthCommission = 0;
+            let currentMonthTax = 0;
+            let currentMonthFinal = 0;
+            let currentMonthApproved = 0;
+            let currentMonthTotal = 0;
 
-            const approvedDbs = dbs.filter(db => db.status === '승인됨');
+            // 누적 데이터 계산
+            let totalApproved = 0;
 
-            approvedDbs.forEach(db => {
-                const commission = parseFloat(db.commission) || 0;
-                totalComm += commission;
-                
-                let dbDate;
-                try {
-                    // '2025. 10. 24. 오후 4:28:24' 형식 처리
-                    const dateStr = db.submittedAt.replace('오전', 'AM').replace('오후', 'PM');
-                    dbDate = new Date(dateStr);
-                } catch(e) {
-                    console.warn("승인된 DB 날짜 변환 오류:", db.submittedAt, e);
-                    dbDate = new Date(0); // 유효하지 않은 날짜
-                }
+            myDbs.forEach(db => {
+                const dbDate = new Date(db.submittedAt);
+                const isCurrentMonth = dbDate.getMonth() === currentMonth && dbDate.getFullYear() === currentYear;
 
-                if (dbDate.getFullYear() === currentYear && dbDate.getMonth() === currentMonth) {
-                    currentMonthComm += commission;
-                }
-                if (dbDate.getFullYear() === prevMonthYear && dbDate.getMonth() === prevMonth) {
-                    prevMonthComm += commission;
-                }
-            });
-
-            // DB 유입 건수 계산 (승인 여부와 관계 없음)
-            dbs.forEach(db => {
-                let dbDate;
-                try {
-                    const dateStr = db.submittedAt.replace('오전', 'AM').replace('오후', 'PM');
-                    dbDate = new Date(dateStr);
-                } catch(e) {
-                    dbDate = new Date(0);
-                }
-                if (dbDate.getFullYear() === currentYear && dbDate.getMonth() === currentMonth) {
-                    currentMonthDbCount++;
-                }
-            });
-
-            // 숫자 포맷터
-            const krwFormatter = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' });
-
-            // 1. 수익 현황 카드 업데이트
-            currentMonthCommission.textContent = krwFormatter.format(currentMonthComm);
-            totalCommission.textContent = krwFormatter.format(totalComm);
-
-            // 지난 달 비교
-            if (prevMonthComm > 0) {
-                const percentage = ((currentMonthComm - prevMonthComm) / prevMonthComm) * 100;
-                if (percentage > 0) {
-                    prevMonthComparison.textContent = `지난 달 대비 ${percentage.toFixed(0)}% 증가`;
-                    prevMonthComparison.className = "mt-1 text-sm text-green-600";
-                } else if (percentage < 0) {
-                    prevMonthComparison.textContent = `지난 달 대비 ${Math.abs(percentage).toFixed(0)}% 감소`;
-                    prevMonthComparison.className = "mt-1 text-sm text-red-600";
-                } else {
-                    prevMonthComparison.textContent = "지난 달과 동일";
-                    prevMonthComparison.className = "mt-1 text-sm text-gray-500";
-                }
-            } else {
-                prevMonthComparison.textContent = "지난 달 실적 없음";
-                prevMonthComparison.className = "mt-1 text-sm text-gray-500";
-            }
-
-            // 2. DB 유입 카드 업데이트
-            currentMonthDbs.textContent = `${currentMonthDbCount} 건`;
-            totalDbs.textContent = `(누적 ${totalDbCount} 건)`;
-
-            // 3. DB 목록 테이블 업데이트
-            loadingRow.classList.add('hidden');
-            dbTableBody.innerHTML = ''; // 로딩 행 제거
-
-            if (dbs.length === 0) {
-                dbTableBody.appendChild(noDataRow);
-                noDataRow.classList.remove('hidden');
-                return;
-            }
-            
-            // 최신순 정렬
-            dbs.sort((a, b) => {
-                const dateA = a.submittedAt ? new Date(a.submittedAt.replace('오전', 'AM').replace('오후', 'PM')) : new Date(0);
-                const dateB = b.submittedAt ? new Date(b.submittedAt.replace('오전', 'AM').replace('오후', 'PM')) : new Date(0);
-                return dateB - dateA;
-            });
-
-            dbs.forEach(db => {
-                const tr = document.createElement('tr');
-                tr.className = (db.status === '승인됨') ? 'bg-green-50' : '';
-
-                // 1. 제출 시간
-                let submittedDate = "N/A";
-                if (db.submittedAt) {
-                    try {
-                        const dateStr = db.submittedAt.replace('오전', 'AM').replace('오후', 'PM');
-                        submittedDate = new Date(dateStr).toLocaleString('ko-KR', { 
-                            year: 'numeric', month: '2-digit', day: '2-digit', 
-                            hour: '2-digit', minute: '2-digit', hour12: false 
-                        });
-                    } catch (e) {
-                        submittedDate = db.submittedAt; // 원본 표시
+                if (db.status === '승인됨') {
+                    totalApproved++;
+                    
+                    if (isCurrentMonth) {
+                        currentMonthApproved++;
+                        currentMonthSales += (db.saleAmount || 0);
+                        currentMonthCommission += (db.commission || 0);
+                        currentMonthTax += (db.withholdingTax || 0);
+                        currentMonthFinal += (db.finalAmount || 0);
                     }
                 }
-                
-                // 2. 수익금 포맷
-                const commissionFormatted = krwFormatter.format(db.commission || 0);
 
-                // 3. 상태 배지
-                let statusBadge;
-                if (db.status === '승인됨') {
-                    statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">승인됨</span>`;
-                } else if (db.status === '취소됨') {
-                    statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">취소됨</span>`;
-                } else {
-                    statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">대기중</span>`;
+                if (isCurrentMonth) {
+                    currentMonthTotal++;
                 }
+            });
 
-                tr.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${submittedDate}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${db.customerName || 'N/A'}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm">${statusBadge}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${commissionFormatted}</td>
+            // UI 업데이트
+            document.getElementById('current-month-sales').textContent = `₩${currentMonthSales.toLocaleString()}`;
+            document.getElementById('current-month-commission').textContent = `₩${currentMonthCommission.toLocaleString()}`;
+            document.getElementById('current-month-tax').textContent = `-₩${currentMonthTax.toLocaleString()}`;
+            document.getElementById('current-month-final').textContent = `₩${currentMonthFinal.toLocaleString()}`;
+            
+            document.getElementById('current-month-db-count').textContent = `${currentMonthTotal} 건`;
+            document.getElementById('current-month-db-detail').textContent = `(승인 ${currentMonthApproved}건)`;
+            
+            document.getElementById('total-db-count').textContent = `${myDbs.length} 건`;
+            document.getElementById('total-db-detail').textContent = `(승인 ${totalApproved}건)`;
+
+            renderDbList();
+        }
+
+        // ==================== DB 목록 렌더링 ====================
+        function renderDbList() {
+            const tbody = document.getElementById('db-list-tbody');
+            tbody.innerHTML = '';
+
+            if (myDbs.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">아직 유입된 DB가 없습니다.</td></tr>';
+                return;
+            }
+
+            myDbs.forEach(db => {
+                const row = document.createElement('tr');
+                row.className = 'hover:bg-gray-50';
+                
+                const statusClass = db.status === '승인됨' ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800';
+                const statusText = db.status || '대기중';
+                
+                const saleAmount = db.saleAmount ? `₩${parseInt(db.saleAmount).toLocaleString()}` : '미입력';
+                const commission = db.commission ? `₩${parseInt(db.commission).toLocaleString()}` : '₩0';
+                const finalAmount = db.finalAmount ? `₩${parseInt(db.finalAmount).toLocaleString()}` : '₩0';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${db.submittedAt || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${db.customerName || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${saleAmount}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${commission}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold">${finalAmount}</td>
+                    <td class="px-6 py-4 whitespace-nowrap">
+                        <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
+                            ${statusText}
+                        </span>
+                    </td>
                 `;
-                dbTableBody.appendChild(tr);
+                tbody.appendChild(row);
             });
         }
-        
-        // --- 에러 메시지 표시 함수 ---
-        function showError(message) {
-            errorText.textContent = message;
-            errorMessage.classList.remove('hidden');
-        }
-        
-        // --- 링크 복사 버튼 ---
-        copyLinkButton.addEventListener('click', () => {
-            const link = refLinkInput.value;
-            
-            // 임시 textarea를 만들어 복사
-            const textArea = document.createElement('textarea');
-            textArea.value = link;
-            document.body.appendChild(textArea);
-            textArea.select();
-            try {
-                document.execCommand('copy');
-                copyLinkButton.textContent = '복사됨!';
-                setTimeout(() => {
-                    copyLinkButton.textContent = '복사';
-                }, 2000);
-            } catch (err) {
-                console.error('링크 복사 실패:', err);
-                alert('링크 복사에 실패했습니다.');
-            }
-            document.body.removeChild(textArea);
-        });
 
+        // ==================== 에러 표시 ====================
+        function showError(message) {
+            document.getElementById('error-text').textContent = message;
+            document.getElementById('error-message').classList.remove('hidden');
+        }
     </script>
 </body>
 </html>
-
