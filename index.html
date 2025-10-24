@@ -54,13 +54,11 @@
         </p>
     </div>
 
-    <!-- Firebase SDK -->
     <script type="module">
-        // Firebase SDK import
         import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
         import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
 
-        // 사장님의 Firebase 설정 정보
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
             authDomain: "speedlanding-dc186.firebaseapp.com",
@@ -81,6 +79,9 @@
         const resetPasswordLink = document.getElementById('reset-password');
         const messageContainer = document.getElementById('message-container');
 
+        // 관리자 이메일
+        const ADMIN_EMAIL = 'jsicoffee@naver.com';
+
         // 로그인 폼 제출 이벤트
         loginForm.addEventListener('submit', async (e) => {
             e.preventDefault();
@@ -96,9 +97,14 @@
                 // 이메일과 비밀번호로 로그인
                 await signInWithEmailAndPassword(auth, email, password);
                 
-                // 로그인 성공 -> 대시보드 페이지로 이동
-                // (절대 경로 사용)
-                window.location.href = window.location.origin + '/dashboard.html';
+                // 관리자와 파트너 구분하여 리다이렉트
+                if (email === ADMIN_EMAIL) {
+                    // 관리자 -> admin.html
+                    window.location.href = window.location.origin + '/admin.html';
+                } else {
+                    // 파트너 -> dashboard.html
+                    window.location.href = window.location.origin + '/dashboard.html';
+                }
 
             } catch (error) {
                 // 에러 처리
@@ -151,4 +157,3 @@
     </script>
 </body>
 </html>
-
