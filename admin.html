@@ -1,0 +1,332 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>관리자 대시보드</title>
+    <script src="https://cdn.tailwindcss.com"></script>
+    <style>
+        body { font-family: 'Inter', sans-serif; }
+        .loader {
+            border-top-color: #3498db;
+            -webkit-animation: spin 1s linear infinite;
+            animation: spin 1s linear infinite;
+        }
+        @-webkit-keyframes spin {
+            0% { -webkit-transform: rotate(0deg); }
+            100% { -webkit-transform: rotate(360deg); }
+        }
+        @keyframes spin {
+            0% { transform: rotate(0deg); }
+            100% { transform: rotate(360deg); }
+        }
+        /* 테이블 고정 헤더 */
+        .table-container { max-height: 70vh; }
+        thead th { position: sticky; top: 0; z-index: 10; background-color: #f9fafb; } /* 헤더 배경색 추가 */
+    </style>
+</head>
+<body class="bg-gray-100">
+
+    <!-- 상단 네비게이션 -->
+    <nav class="bg-white shadow-md">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex-shrink-0 flex items-center">
+                    <h1 class="text-2xl font-bold text-indigo-600">Admin Dashboard</h1>
+                </div>
+                <div class="flex items-center">
+                    <span id="user-welcome" class="text-sm text-gray-700 mr-4">로딩 중...</span>
+                    <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium">
+                        로그아웃
+                    </button>
+                </div>
+            </div>
+        </div>
+    </nav>
+
+    <!-- 메인 컨텐츠 -->
+    <div id="admin-container" class="py-10 hidden">
+        <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <h2 class="text-3xl font-bold leading-7 text-gray-900 sm:text-4xl sm:truncate">
+                DB 승인 관리
+            </h2>
+            <p class="mt-1 text-lg text-gray-500">Tally에서 유입된 모든 DB 목록입니다.</p>
+        </header>
+
+        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+            
+            <!-- 필터 및 새로고침 -->
+            <div class="flex justify-between items-center mb-4">
+                <div>
+                    <label for="status-filter" class="text-sm font-medium text-gray-700 mr-2">상태 필터:</label>
+                    <select id="status-filter" class="rounded-md border-gray-300 shadow-sm focus:border-indigo-300 focus:ring focus:ring-indigo-200 focus:ring-opacity-50">
+                        <option value="all">전체 보기</option>
+                        <option value="대기">대기</option>
+                        <option value="승인됨">승인됨</option>
+                        <option value="보류">보류</option>
+                    </select>
+                </div>
+                <button id="refresh-button" class="bg-blue-500 hover:bg-blue-600 text-white px-4 py-2 rounded-md text-sm font-medium">
+                    새로고침
+                </button>
+            </div>
+
+            <!-- DB 목록 테이블 -->
+            <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+                <div class="table-container overflow-y-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제출 시간</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">고객 성함</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">영업 코드</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">승인 상태</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수익금 (원)</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="db-table-body" class="bg-white divide-y divide-gray-200">
+                            <!-- JS로 데이터가 채워질 영역 -->
+                        </tbody>
+                    </table>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <!-- 로딩 및 권한 없음 표시 -->
+    <div id="message-center" class="flex justify-center items-center h-[80vh]">
+        <div id="loading-spinner" class="flex flex-col items-center">
+            <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
+            <p class="mt-4 text-gray-600">데이터를 불러오는 중입니다...</p>
+        </div>
+        <div id="unauthorized-message" class="hidden text-center">
+            <h2 class="text-2xl font-bold text-red-600">접근 권한 없음</h2>
+            <p class="mt-2 text-gray-700">이 페이지는 관리자 전용입니다.</p>
+            <p class="mt-4">
+                <a href="index.html" class="text-indigo-600 hover:underline">로그인 페이지로 돌아가기</a>
+            </p>
+        </div>
+    </div>
+
+
+    <!-- Firebase SDK -->
+    <script type="module">
+        // 1. Firebase SDK import
+        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
+        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
+        
+        // (!!!!) 사장님의 관리자 이메일
+        const ADMIN_EMAIL = "sangiljo88@gmail.com"; 
+
+        // (!!!!) 사장님이 방금 새로 배포한 Google Apps Script URL
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbx3cbyR4IxuwtD9UsUUt26FwEUDc702s2ikBGQIz0T2WeKiVKLncKsRueVHSbVrqrTX/exec";
+
+        // 2. 사장님의 Firebase 설정 정보
+        const firebaseConfig = {
+            apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
+            authDomain: "speedlanding-dc186.firebaseapp.com",
+            projectId: "speedlanding-dc186",
+            storageBucket: "speedlanding-dc186.firebasestorage.app",
+            messagingSenderId: "392587509521",
+            appId: "1:392587509521:web:2679d3da4f9bb2e23156b0",
+            measurementId: "G-ZG0N9R3LGF"
+        };
+        
+        // 3. Firebase 앱 초기화
+        const app = initializeApp(firebaseConfig);
+        const auth = getAuth(app);
+
+        // 4. DOM 요소
+        const loadingSpinner = document.getElementById('loading-spinner');
+        const messageCenter = document.getElementById('message-center');
+        const adminContainer = document.getElementById('admin-container');
+        const unauthorizedMessage = document.getElementById('unauthorized-message');
+        const logoutButton = document.getElementById('logout-button');
+        const refreshButton = document.getElementById('refresh-button');
+        const statusFilter = document.getElementById('status-filter');
+        const tableBody = document.getElementById('db-table-body');
+        
+        let allDbData = []; // 전체 DB 데이터를 저장할 전역 변수
+
+        // 5. 메인 로직: 인증 상태 확인
+        onAuthStateChanged(auth, async (user) => {
+            if (user) {
+                // 로그인된 상태
+                document.getElementById('user-welcome').textContent = `${user.email} (관리자)`;
+
+                if (user.email === ADMIN_EMAIL) {
+                    // 관리자 이메일 일치
+                    await loadAllDbs(); // DB 데이터 로드
+                } else {
+                    // 관리자 이메일 불일치
+                    showUnauthorized();
+                }
+            } else {
+                // 로그아웃된 상태 -> 로그인 페이지로 리디렉션
+                window.location.href = window.location.origin + '/index.html';
+            }
+        });
+        
+        // 6. [관리자] 모든 DB 데이터 로드 함수
+        async function loadAllDbs() {
+            loadingSpinner.classList.remove('hidden');
+            messageCenter.classList.add('flex');
+            messageCenter.classList.remove('hidden');
+            adminContainer.classList.add('hidden');
+            
+            try {
+                const url = new URL(GAS_URL);
+                url.searchParams.append('action', 'getAllDbs');
+                
+                const response = await fetch(url, { cache: 'no-store' });
+                if (!response.ok) throw new Error("API 호출 실패");
+                
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message);
+                
+                allDbData = result.data; // 전역 변수에 저장
+                renderTable(allDbData); // 테이블 렌더링
+                
+                messageCenter.classList.add('hidden');
+                adminContainer.classList.remove('hidden');
+
+            } catch (error) {
+                console.error("DB 로드 실패:", error);
+                loadingSpinner.innerHTML = `<p class="text-red-500">데이터 로드 실패: ${error.message}</p>`;
+            }
+        }
+
+        // 7. [관리자] DB 승인 상태 업데이트 함수
+        async function handleUpdate(rowNumber) {
+            const statusSelect = document.getElementById(`status-${rowNumber}`);
+            const commissionInput = document.getElementById(`commission-${rowNumber}`);
+            const updateButton = document.getElementById(`update-btn-${rowNumber}`);
+            
+            const status = statusSelect.value;
+            const commission = commissionInput.value;
+
+            if (!status) {
+                alert("상태를 선택하세요.");
+                return;
+            }
+            if (status === '승인됨' && (!commission || Number(commission) <= 0)) {
+                alert("'승인됨' 상태는 수익금을 0보다 큰 값으로 입력해야 합니다.");
+                return;
+            }
+
+            updateButton.disabled = true;
+            updateButton.textContent = '저장중...';
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'updateDbStatus',
+                        rowNumber: rowNumber,
+                        status: status,
+                        commission: Number(commission)
+                    })
+                });
+                
+                const result = await response.json();
+                if (!result.success) throw new Error(result.message);
+
+                alert("업데이트 성공!");
+                // 로컬 데이터도 업데이트 (새로고침 방지)
+                const item = allDbData.find(db => db.rowNumber === rowNumber);
+                if(item) {
+                    item.status = status;
+                    item.commission = Number(commission);
+                }
+                renderTable(allDbData); // 테이블 다시 그리기
+
+            } catch (error) {
+                console.error("업데이트 실패:", error);
+                alert(`업데이트 실패: ${error.message}`);
+                updateButton.disabled = false;
+                updateButton.textContent = '저장';
+            }
+        }
+
+        // 8. 테이블 렌더링 함수
+        function renderTable(dbData) {
+            tableBody.innerHTML = ''; // 테이블 비우기
+            
+            const filterValue = statusFilter.value;
+            const filteredData = (filterValue === 'all') 
+                ? dbData 
+                : dbData.filter(db => {
+                    // 'status' 열이 비어있거나 '대기'일 경우 '대기' 필터에 잡히도록 처리
+                    const dbStatus = db.status || '대기';
+                    return dbStatus === filterValue;
+                });
+
+            if (filteredData.length === 0) {
+                tableBody.innerHTML = `<tr><td colspan="6" class="px-6 py-4 text-center text-gray-500">표시할 DB가 없습니다.</td></tr>`;
+                return;
+            }
+            
+            filteredData.forEach(db => {
+                const row = document.createElement('tr');
+                const currentStatus = db.status || '대기'; // 비어있으면 '대기'로 간주
+                row.className = currentStatus === '승인됨' ? 'bg-green-50' : (currentStatus === '보류' ? 'bg-red-50' : 'bg-white');
+                
+                const statusOptions = ['대기', '승인됨', '보류']
+                    .map(s => `<option value="${s}" ${currentStatus === s ? 'selected' : ''}>${s}</option>`)
+                    .join('');
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${new Date(db.submittedAt).toLocaleString('ko-KR')}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${db.customerName || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-500">${db.referralCode || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <select id="status-${db.rowNumber}" class="rounded-md border-gray-300 shadow-sm w-full">
+                            ${statusOptions}
+                        </select>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <input type="number" id="commission-${db.rowNumber}" value="${db.commission || 0}"
+                               class="rounded-md border-gray-300 shadow-sm w-full">
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">
+                        <button id="update-btn-${db.rowNumber}" 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1.5 rounded-md text-sm font-medium">
+                            저장
+                        </button>
+                    </td>
+                `;
+                tableBody.appendChild(row);
+                
+                // 각 '저장' 버튼에 이벤트 리스너 동적 추가
+                document.getElementById(`update-btn-${db.rowNumber}`).addEventListener('click', () => handleUpdate(db.rowNumber));
+            });
+        }
+        
+        // 9. 권한 없음 UI 표시
+        function showUnauthorized() {
+            loadingSpinner.classList.add('hidden');
+            unauthorizedMessage.classList.remove('hidden');
+            messageCenter.classList.add('flex');
+            messageCenter.classList.remove('hidden');
+            adminContainer.classList.add('hidden');
+        }
+
+        // 10. 이벤트 리스너 연결
+        logoutButton.addEventListener('click', async () => {
+            try {
+                await signOut(auth);
+                // onAuthStateChanged가 감지하여 로그인 페이지로 보냄
+            } catch (error) {
+                console.error("로그아웃 실패:", error);
+            }
+        });
+        
+        refreshButton.addEventListener('click', loadAllDbs);
+        statusFilter.addEventListener('change', () => renderTable(allDbData));
+
+    </script>
+</body>
+</html>
+
