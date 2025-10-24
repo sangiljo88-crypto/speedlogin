@@ -3,8 +3,11 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>파트너 대시보드</title>
+    <title>Admin Dashboard</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
         .loader {
@@ -20,19 +23,45 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        /* 간단한 모달 스타일 */
+        .modal {
+            display: none; /* Hidden by default */
+            position: fixed;
+            z-index: 100;
+            left: 0;
+            top: 0;
+            width: 100%;
+            height: 100%;
+            overflow: auto;
+            background-color: rgba(0,0,0,0.4);
+        }
+        .modal-content {
+            background-color: #fefefe;
+            margin: 15% auto;
+            padding: 24px;
+            border-radius: 0.75rem;
+            width: 90%;
+            max-width: 400px;
+            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
+        }
+        .modal-body { margin-top: 16px; margin-bottom: 16px; }
+        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
     </style>
 </head>
-<body class="bg-gray-100">
+<body class="bg-gray-100 min-h-screen">
 
     <!-- 상단 네비게이션 -->
-    <nav class="bg-white shadow-md">
+    <nav class="bg-white shadow-sm">
         <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
             <div class="flex justify-between h-16">
                 <div class="flex-shrink-0 flex items-center">
-                    <h1 class="text-2xl font-bold text-indigo-600">Sales Dashboard</h1>
+                    <h1 class="text-2xl font-bold text-indigo-600">Admin Dashboard</h1>
                 </div>
-                <div class="flex items-center">
-                    <span id="user-welcome" class="text-sm text-gray-700 mr-4">로딩 중...</span>
+                <div id="nav-user" class="flex items-center hidden">
+                    <span id="user-email" class="text-sm text-gray-700 mr-2"></span>
+                    <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-medium bg-indigo-100 text-indigo-800 mr-4">
+                        관리자
+                    </span>
                     <button id="logout-button" class="bg-red-500 hover:bg-red-600 text-white px-3 py-1.5 rounded-md text-sm font-medium">
                         로그아웃
                     </button>
@@ -42,328 +71,354 @@
     </nav>
 
     <!-- 메인 컨텐츠 -->
-    <div class="py-10">
-        <header class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
-            <div class="md:flex md:items-center md:justify-between">
-                <div class="flex-1 min-w-0">
-                    <h2 id="user-name-header" class="text-3xl font-bold leading-7 text-gray-900 sm:text-4xl sm:truncate">
-                        ...
-                    </h2>
-                    <p class="mt-1 text-lg text-gray-500">파트너님의 실적을 확인하세요.</p>
-                </div>
-                <div class="mt-4 flex md:mt-0 md:ml-4">
-                    <div class="relative">
-                        <input id="ref-link" type="text" readonly
-                            class="bg-gray-200 text-gray-700 px-4 py-2 rounded-l-md focus:outline-none w-72"
-                            value="https://brandforyou.kr/?ref=...">
-                        <button id="copy-link-button" class="absolute right-0 top-0 h-full px-4 bg-indigo-600 text-white rounded-r-md hover:bg-indigo-700">
-                            복사
-                        </button>
-                    </div>
-                </div>
-            </div>
-        </header>
+    <div id="main-container" class="py-10 max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 hidden">
+        
+        <!-- 권한 없음 메시지 -->
+        <div id="auth-error" class="hidden text-center p-10 bg-white rounded-lg shadow-lg">
+            <h2 class="text-2xl font-bold text-red-600 mb-4">접근 권한 없음</h2>
+            <p class="text-gray-600">이 페이지는 관리자 전용입니다.</p>
+            <a href="index.html" class="mt-6 inline-block text-indigo-600 hover:text-indigo-800">
+                로그인 페이지로 돌아가기
+            </a>
+        </div>
 
-        <main class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 mt-8">
+        <!-- 관리자 대시보드 -->
+        <div id="admin-dashboard" class="hidden">
+            <header class="mb-8">
+                <h2 class="text-3xl font-bold leading-7 text-gray-900 sm:text-4xl sm:truncate">
+                    전체 DB 승인 관리
+                </h2>
+                <p class="mt-1 text-lg text-gray-500">Tally에서 유입된 DB 목록을 확인하고 승인합니다.</p>
+            </header>
             
-            <!-- 로딩 스피너 -->
-            <div id="loading-spinner" class="flex justify-center items-center h-64">
-                <div class="loader ease-linear rounded-full border-8 border-t-8 border-gray-200 h-32 w-32"></div>
+            <!-- 에러 메시지 표시줄 -->
+            <div id="error-message" class="hidden bg-red-100 border border-red-400 text-red-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                <strong class="font-bold">데이터 로드 실패:</strong>
+                <span id="error-text" class="block sm:inline"></span>
             </div>
 
-            <!-- 데이터 영역 (로딩 후 표시) -->
-            <div id="dashboard-content" class="hidden">
-                <!-- 1. 수익 현황 카드 -->
-                <h3 class="text-xl font-semibold text-gray-900 mb-4">수익 현황</h3>
-                <div class="grid grid-cols-1 md:grid-cols-3 gap-6">
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <h4 class="text-sm font-medium text-gray-500">이번 달 승인 수익</h4>
-                        <p id="this-month-commission" class="mt-1 text-4xl font-bold text-indigo-600">0 원</p>
-                        <p id="month-comparison" class="mt-1 text-sm text-gray-500">지난 달 대비 ...</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <h4 class="text-sm font-medium text-gray-500">누적 총 승인 수익</h4>
-                        <p id="total-commission" class="mt-1 text-4xl font-bold text-gray-800">0 원</p>
-                    </div>
-                    <div class="bg-white p-6 rounded-xl shadow-lg">
-                        <h4 class="text-sm font-medium text-gray-500">이번 달 총 DB 유입</h4>
-                        <p id="this-month-dbs" class="mt-1 text-4xl font-bold text-gray-800">0 건</p>
-                        <p id="total-dbs" class="mt-1 text-sm text-gray-500"> (누적 0 건)</p>
-                    </div>
-                </div>
-
-                <!-- 2. 내 DB 확인하기 -->
-                <h3 class="text-xl font-semibold text-gray-900 mt-10 mb-4">내 DB 목록 (최신순)</h3>
-                <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+            <!-- DB 목록 -->
+            <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+                <div class="overflow-x-auto">
                     <table class="min-w-full divide-y divide-gray-200">
                         <thead class="bg-gray-50">
                             <tr>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제출 시간</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">고객 성함</th>
-                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">승인 상태</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">영업 코드</th>
                                 <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수익금</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
+                                <th scope="col" class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">관리</th>
                             </tr>
                         </thead>
                         <tbody id="db-table-body" class="bg-white divide-y divide-gray-200">
-                            <!-- JS로 데이터가 채워질 영역 -->
-                            <tr>
-                                <td colspan="4" class="px-6 py-4 text-center text-gray-500">DB를 불러오는 중입니다...</td>
+                            <!-- 로딩 행 -->
+                            <tr id="loading-row">
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    <div class="flex justify-center items-center">
+                                        <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-6 w-6 mr-2"></div>
+                                        데이터를 불러오는 중입니다...
+                                    </div>
+                                </td>
+                            </tr>
+                            <!-- 데이터 없음 행 -->
+                            <tr id="no-data-row" class="hidden">
+                                <td colspan="6" class="px-6 py-4 text-center text-gray-500">
+                                    아직 유입된 DB가 없습니다.
+                                </td>
                             </tr>
                         </tbody>
                     </table>
                 </div>
             </div>
-        </main>
+        </div>
+    </div>
+    
+    <!-- 승인 확인 모달 -->
+    <div id="approve-modal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-lg leading-6 font-medium text-gray-900">DB 승인 확인</h3>
+            <div class="modal-body">
+                <p class="text-sm text-gray-500 mb-4">
+                    정말로 이 DB를 승인하시겠습니까?<br>
+                    고객명: <strong id="modal-customer-name"></strong><br>
+                    영업 코드: <strong id="modal-ref-code"></strong>
+                </p>
+                <div>
+                    <label for="commission-input" class="block text-sm font-medium text-gray-700">수익금 (원)</label>
+                    <div class="mt-1">
+                        <input type="number" id="commission-input" value="0" class="shadow-sm focus:ring-indigo-500 focus:border-indigo-500 block w-full sm:text-sm border-gray-300 rounded-md p-2">
+                    </div>
+                </div>
+            </div>
+            <div class="modal-footer">
+                <button id="modal-cancel" type="button" class="bg-white py-2 px-4 border border-gray-300 rounded-md shadow-sm text-sm font-medium text-gray-700 hover:bg-gray-50 focus:outline-none">
+                    취소
+                </button>
+                <button id="modal-confirm" type="button" class="bg-indigo-600 py-2 px-4 border border-transparent rounded-md shadow-sm text-sm font-medium text-white hover:bg-indigo-700 focus:outline-none">
+                    승인
+                </button>
+            </div>
+        </div>
     </div>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        // 1. Firebase SDK import
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, onAuthStateChanged, signOut } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, doc, getDoc } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
 
-        // 2. 사장님의 Firebase 설정 정보
+    <script>
+        // (!!!!) 1. Firebase 구성 (사장님 프로젝트 값)
         const firebaseConfig = {
-            apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
-            authDomain: "speedlanding-dc186.firebaseapp.com",
-            projectId: "speedlanding-dc186",
-            storageBucket: "speedlanding-dc186.firebasestorage.app",
-            messagingSenderId: "392587509521",
-            appId: "1:392587509521:web:2679d3da4f9bb2e23156b0",
-            measurementId: "G-ZG0N9R3LGF"
+          apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
+          authDomain: "speedlanding-dc186.firebaseapp.com",
+          projectId: "speedlanding-dc186",
+          storageBucket: "speedlanding-dc186.firebasestorage.app",
+          messagingSenderId: "392587509521",
+          appId: "1:392587509521:web:2679d3da4f9bb2e23156b0",
+          measurementId: "G-ZG0N9R3LGF"
         };
         
-        // (!!!!) [업데이트됨] 사장님이 배포한 Google Apps Script URL
-        const GAS_URL = "https://script.google.com/macros/s/AKfycby52HG8UsAVTr-T8r0dIrzlXpeqPYNXrNAYu_hZKWYXHejSrYg8k7hMhO6ilpVGqpna/exec";
+        // (!!!!) 2. Apps Script API 주소 (방금 재배포한 최신 URL)
+        const GAS_URL = "https://script.google.com/macros/s/AKfycbwBfRC80cothXkSYy0kgcBudsfxqwNgL6EMNKR4-4UBueYsZHYjK_tMzRG5__EAjSE/exec";
 
+        // (!!!!) 3. 사장님의 관리자 이메일
+        const ADMIN_EMAIL = "jsicoffee@naver.com";
 
-        // 3. Firebase 앱 초기화
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // --- Firebase 초기화 ---
+        try {
+            firebase.initializeApp(firebaseConfig);
+        } catch (e) {
+            console.error("Firebase 초기화 오류:", e);
+        }
 
-        // 4. DOM 요소
-        const loadingSpinner = document.getElementById('loading-spinner');
-        const dashboardContent = document.getElementById('dashboard-content');
+        const auth = firebase.auth();
+        const db = firebase.firestore();
+
+        // --- DOM 요소 ---
+        const mainContainer = document.getElementById('main-container');
+        const loadingSpinner = document.getElementById('loading-spinner'); // 초기 로딩 스피너 (이제 사용 안함)
+        const navUser = document.getElementById('nav-user');
+        const userEmail = document.getElementById('user-email');
         const logoutButton = document.getElementById('logout-button');
-        const copyLinkButton = document.getElementById('copy-link-button');
+        
+        const authErrorContainer = document.getElementById('auth-error');
+        const adminDashboardContainer = document.getElementById('admin-dashboard');
+        const dbTableBody = document.getElementById('db-table-body');
+        const loadingRow = document.getElementById('loading-row');
+        const noDataRow = document.getElementById('no-data-row');
+        const errorMessage = document.getElementById('error-message');
+        const errorText = document.getElementById('error-text');
 
-        // 5. 메인 로직: 인증 상태 확인
-        onAuthStateChanged(auth, async (user) => {
+        // --- 모달 요소 ---
+        const approveModal = document.getElementById('approve-modal');
+        const modalCustomerName = document.getElementById('modal-customer-name');
+        const modalRefCode = document.getElementById('modal-ref-code');
+        const commissionInput = document.getElementById('commission-input');
+        const modalCancel = document.getElementById('modal-cancel');
+        const modalConfirm = document.getElementById('modal-confirm');
+        let currentRowNumber = null; // 승인할 행 번호 저장
+
+        // --- Firebase 인증 상태 리스너 ---
+        auth.onAuthStateChanged(user => {
+            mainContainer.classList.remove('hidden');
+
             if (user) {
-                // 로그인된 상태
-                try {
-                    // 1. Firestore에서 영업자 정보 가져오기
-                    const userData = await getUserData(user.uid);
-                    if (!userData) {
-                        throw new Error("Firestore에서 사용자 정보를 찾을 수 없습니다.");
-                    }
-                    
-                    // 2. 헤더 및 영업 링크 UI 업데이트
-                    updateHeaderUI(userData);
+                // 로그인 상태
+                navUser.classList.remove('hidden');
+                userEmail.textContent = user.email;
 
-                    // 3. Google Apps Script에서 DB 데이터 가져오기
-                    const dbData = await fetchSheetData(userData.username);
-
-                    // 4. 데이터 분석 및 대시보드 UI 업데이트
-                    updateDashboardUI(dbData);
-                    updateDbTable(dbData);
-
-                    // 5. 로딩 숨기고 컨텐츠 표시
-                    loadingSpinner.classList.add('hidden');
-                    dashboardContent.classList.remove('hidden');
-
-                } catch (error) {
-                    console.error("대시보드 로딩 실패:", error);
-                    document.body.innerHTML = `<div class="p-8 text-red-500">대시보드 로딩에 실패했습니다: ${error.message}</div>`;
+                if (user.email === ADMIN_EMAIL) {
+                    // 관리자일 경우
+                    adminDashboardContainer.classList.remove('hidden');
+                    loadAllDbs();
+                } else {
+                    // 관리자가 아닐 경우
+                    authErrorContainer.classList.remove('hidden');
                 }
             } else {
-                // 로그아웃된 상태 -> 로그인 페이지로 리디렉션
-                // [FIX] 상대 경로 대신 'window.location.origin'을 사용하여 절대 경로로 변경
-                // 이렇게 하면 '.../index.html' 형태의 유효한 URL이 됩니다.
+                // 로그아웃 상태
                 window.location.href = window.location.origin + '/index.html';
             }
         });
 
-        // 6. Firestore에서 영업자 상세 정보 가져오기
-        async function getUserData(uid) {
-            const docRef = doc(db, "users", uid);
-            const docSnap = await getDoc(docRef);
-            if (docSnap.exists()) {
-                return docSnap.data();
-            } else {
-                return null;
-            }
-        }
+        // --- 로그아웃 버튼 ---
+        logoutButton.addEventListener('click', () => {
+            auth.signOut().catch(error => console.error("로그아웃 오류:", error));
+        });
 
-        // 7. Google Apps Script(GAS)에서 DB 목록 가져오기
-        async function fetchSheetData(referralCode) {
-            const url = new URL(GAS_URL);
-            url.searchParams.append('action', 'getDbsByRef');
-            url.searchParams.append('ref', referralCode);
+        // --- 데이터 로드 함수 ---
+        async function loadAllDbs() {
+            loadingRow.classList.remove('hidden');
+            noDataRow.classList.add('hidden');
+            errorMessage.classList.add('hidden');
+            dbTableBody.innerHTML = ''; // 기존 데이터 초기화 (로딩 행 포함)
+            dbTableBody.appendChild(loadingRow);
 
-            // API 호출 시 캐시를 사용하지 않도록 설정 (실시간 반영)
-            const response = await fetch(url, { cache: 'no-store' });
-            if (!response.ok) {
-                throw new Error("Apps Script API 호출에 실패했습니다.");
-            }
-            const result = await response.json();
-            if (!result.success) {
-                throw new Error(`Apps Script 오류: ${result.message}`);
-            }
-            return result.data; // DB 데이터 배열 반환
-        }
+            try {
+                const response = await fetch(`${GAS_URL}?action=getAllDbs`);
+                const result = await response.json();
 
-        // 8. 헤더 UI 업데이트 (이름, 영업링크)
-        function updateHeaderUI(userData) {
-            document.getElementById('user-welcome').textContent = `${userData.fullName || '파트너'}님, 환영합니다!`;
-            document.getElementById('user-name-header').textContent = `${userData.fullName || '...'}님의 대시보드`;
-            const refLinkInput = document.getElementById('ref-link');
-            refLinkInput.value = `https://brandforyou.kr/?ref=${userData.username}`;
-        }
-
-        // 9. 대시보드 카드 (수익 현황) UI 업데이트
-        function updateDashboardUI(dbData) {
-            const now = new Date();
-            const currentYear = now.getFullYear();
-            const currentMonth = now.getMonth(); // 0 (1월) ~ 11 (12월)
-
-            let totalCommission = 0;
-            let thisMonthCommission = 0;
-            let lastMonthCommission = 0;
-            let thisMonthDbs = 0;
-
-            dbData.forEach(db => {
-                const dbDate = new Date(db.submittedAt);
-                const dbYear = dbDate.getFullYear();
-                const dbMonth = dbDate.getMonth();
-
-                // 누적 총 수익 (승인된 것만)
-                if (db.status === '승인됨') {
-                    totalCommission += db.commission;
-                }
-
-                // 이번 달 데이터
-                if (dbYear === currentYear && dbMonth === currentMonth) {
-                    thisMonthDbs++;
-                    if (db.status === '승인됨') {
-                        thisMonthCommission += db.commission;
-                    }
-                }
-                
-                // 지난 달 데이터
-                const lastMonthDate = new Date(now.getFullYear(), now.getMonth() - 1, 1);
-                if (dbYear === lastMonthDate.getFullYear() && dbMonth === lastMonthDate.getMonth()) {
-                    if (db.status === '승인됨') {
-                        lastMonthCommission += db.commission;
-                    }
-                }
-            });
-
-            // 숫자 포맷팅 (원)
-            const formatter = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' });
-            
-            document.getElementById('this-month-commission').textContent = formatter.format(thisMonthCommission);
-            document.getElementById('total-commission').textContent = formatter.format(totalCommission);
-            document.getElementById('this-month-dbs').textContent = `${thisMonthDbs} 건`;
-            document.getElementById('total-dbs').textContent = ` (누적 ${dbData.length} 건)`;
-
-            // 지난 달 대비 % 계산
-            const comparisonEl = document.getElementById('month-comparison');
-            if (lastMonthCommission === 0) {
-                if (thisMonthCommission > 0) {
-                    comparisonEl.textContent = '지난 달 실적 없음';
+                if (result.success) {
+                    displayDbs(result.data);
                 } else {
-                    comparisonEl.textContent = '지난 달 실적 없음';
+                    throw new Error(result.message);
                 }
-                comparisonEl.className = 'mt-1 text-sm text-gray-500';
-            } else {
-                const percentChange = ((thisMonthCommission - lastMonthCommission) / lastMonthCommission) * 100;
-                if (percentChange > 0) {
-                    comparisonEl.textContent = `지난 달 대비 ${percentChange.toFixed(0)}% 증가 🔺`;
-                    comparisonEl.className = 'mt-1 text-sm text-green-600';
-                } else if (percentChange < 0) {
-                    comparisonEl.textContent = `지난 달 대비 ${Math.abs(percentChange).toFixed(0)}% 감소 🔻`;
-                    comparisonEl.className = 'mt-1 text-sm text-red-600';
-                } else {
-                    comparisonEl.textContent = `지난 달과 동일합니다.`;
-                    comparisonEl.className = 'mt-1 text-sm text-gray-500';
-                }
+            } catch (error) {
+                console.error("데이터 로드 오류:", error);
+                showError(error.message);
             }
         }
 
-        // 10. DB 목록 테이블 UI 업데이트
-        function updateDbTable(dbData) {
-            const tableBody = document.getElementById('db-table-body');
-            tableBody.innerHTML = ''; // 기존 내용 비우기
+        // --- DB 목록 표시 함수 ---
+        function displayDbs(dbs) {
+            loadingRow.classList.add('hidden');
+            dbTableBody.innerHTML = ''; // 로딩 행 제거
 
-            if (dbData.length === 0) {
-                tableBody.innerHTML = `<tr><td colspan="4" class="px-6 py-4 text-center text-gray-500">아직 유입된 DB가 없습니다.</td></tr>`;
+            if (dbs.length === 0) {
+                dbTableBody.appendChild(noDataRow);
+                noDataRow.classList.remove('hidden');
                 return;
             }
             
-            const formatter = new Intl.NumberFormat('ko-KR', { style: 'currency', currency: 'KRW' });
+            // 최신순으로 정렬 (날짜/시간 문자열 비교)
+            dbs.sort((a, b) => {
+                const dateA = a.submittedAt ? new Date(a.submittedAt) : new Date(0);
+                const dateB = b.submittedAt ? new Date(b.submittedAt) : new Date(0);
+                return dateB - dateA;
+            });
 
-            dbData.forEach(db => {
-                let statusBadge = '';
+            dbs.forEach(db => {
+                const tr = document.createElement('tr');
+                tr.className = (db.status === '승인됨') ? 'bg-green-50' : '';
+
+                // 1. 제출 시간
+                let submittedDate = "N/A";
+                if (db.submittedAt) {
+                    try {
+                        // '2025. 10. 24. 오후 4:28:24' 형식 처리
+                        const dateStr = db.submittedAt.replace('오전', 'AM').replace('오후', 'PM');
+                        submittedDate = new Date(dateStr).toLocaleString('ko-KR', { 
+                            year: 'numeric', month: '2-digit', day: '2-digit', 
+                            hour: '2-digit', minute: '2-digit', hour12: false 
+                        });
+                    } catch (e) {
+                        console.warn("날짜 형식 변환 오류:", db.submittedAt, e);
+                        submittedDate = db.submittedAt; // 원본 표시
+                    }
+                }
+                
+                // 2. 수익금 포맷
+                const commissionFormatted = new Intl.NumberFormat('ko-KR', { 
+                    style: 'currency', currency: 'KRW' 
+                }).format(db.commission || 0);
+
+                // 3. 상태 배지
+                let statusBadge;
                 if (db.status === '승인됨') {
                     statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-green-100 text-green-800">승인됨</span>`;
-                } else if (db.status === '대기' || !db.status) {
-                    statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">대기중</span>`;
+                } else if (db.status === '취소됨') {
+                    statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-red-100 text-red-800">취소됨</span>`;
                 } else {
-                    statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-gray-100 text-gray-800">${db.status}</span>`;
+                    statusBadge = `<span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full bg-yellow-100 text-yellow-800">대기중</span>`;
                 }
 
+                // 4. 관리 버튼
+                let actionButton;
+                if (db.status === '승인됨') {
+                    actionButton = `<span class="text-xs text-gray-400">승인 완료</span>`;
+                } else {
+                    actionButton = `<button data-row="${db.rowNumber}" data-name="${db.customerName}" data-ref="${db.referralCode}" data-commission="${db.commission || 0}"
+                                    class="approve-btn bg-indigo-600 hover:bg-indigo-700 text-white px-3 py-1 rounded-md text-xs font-medium">
+                                    승인
+                                </button>`;
+                }
 
-                const row = `
-                    <tr>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${new Date(db.submittedAt).toLocaleString('ko-KR')}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${db.customerName || 'N/A'}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm">${statusBadge}</td>
-                        <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-800 font-medium">${db.status === '승인됨' ? formatter.format(db.commission) : '-'}</td>
-                    </tr>
+                tr.innerHTML = `
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${submittedDate}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium text-gray-900">${db.customerName || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-700">${db.referralCode || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-semibold text-gray-900">${commissionFormatted}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm">${statusBadge}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm font-medium">${actionButton}</td>
                 `;
-                tableBody.innerHTML += row; // 테이블에 행 추가
+                dbTableBody.appendChild(tr);
+            });
+            
+            // 승인 버튼에 이벤트 리스너 추가
+            addApproveButtonListeners();
+        }
+        
+        // --- 승인 버튼 이벤트 리스너 함수 ---
+        function addApproveButtonListeners() {
+            document.querySelectorAll('.approve-btn').forEach(button => {
+                button.addEventListener('click', (e) => {
+                    const btn = e.currentTarget;
+                    currentRowNumber = btn.dataset.row;
+                    modalCustomerName.textContent = btn.dataset.name;
+                    modalRefCode.textContent = btn.dataset.ref;
+                    commissionInput.value = btn.dataset.commission || 0;
+                    approveModal.style.display = 'block';
+                });
             });
         }
-
-        // 11. 로그아웃 이벤트
-        logoutButton.addEventListener('click', async () => {
-            try {
-                await signOut(auth);
-                // onAuthStateChanged 리스너가 감지하여 자동으로 로그인 페이지로 이동시킵니다.
-            } catch (error) {
-                console.error("로그아웃 실패:", error);
+        
+        // --- 모달 닫기 이벤트 ---
+        modalCancel.addEventListener('click', () => {
+            approveModal.style.display = 'none';
+        });
+        window.addEventListener('click', (event) => {
+            if (event.target == approveModal) {
+                approveModal.style.display = 'none';
             }
         });
 
-        // 12. 영업 링크 복사 이벤트
-        copyLinkButton.addEventListener('click', () => {
-            const refLinkInput = document.getElementById('ref-link');
+        // --- 모달 승인 확인 이벤트 ---
+        modalConfirm.addEventListener('click', async () => {
+            const status = '승인됨';
+            const commission = commissionInput.value;
+            const rowNumber = currentRowNumber;
             
-            // navigator.clipboard.writeText가 최신 방식이며 https 환경에서 잘 작동합니다.
-            // iFrame이 아닌 실제 Netlify 배포 환경에서는 이 방식이 더 안정적입니다.
-            navigator.clipboard.writeText(refLinkInput.value).then(() => {
-                copyLinkButton.textContent = '복사됨!';
-                setTimeout(() => {
-                    copyLinkButton.textContent = '복사';
-                }, 2000);
-            }).catch(err => {
-                console.error('링크 복사 실패:', err);
-                // 클립보드 복사 실패 시 (예: http 환경) 구 방식(execCommand) 시도
-                try {
-                    refLinkInput.select();
-                    document.execCommand('copy');
-                    copyLinkButton.textContent = '복사됨!';
-                    setTimeout(() => {
-                        copyLinkButton.textContent = '복사';
-                    }, 2000);
-                } catch (e) {
-                    alert('링크 복사에 실패했습니다. 직접 복사해 주세요.');
+            modalConfirm.disabled = true;
+            modalConfirm.textContent = '처리중...';
+
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    body: JSON.stringify({
+                        action: 'updateDbStatus',
+                        rowNumber: rowNumber,
+                        status: status,
+                        commission: commission
+                    }),
+                    headers: {
+                        'Content-Type': 'application/json'
+                    }
+                });
+                const result = await response.json();
+
+                if (result.success) {
+                    // 성공 시 모달 닫고 목록 새로고침
+                    approveModal.style.display = 'none';
+                    loadAllDbs(); // 목록 다시 로드
+                } else {
+                    throw new Error(result.message);
                 }
-            });
+
+            } catch (error) {
+                console.error("승인 처리 오류:", error);
+                alert("승인 처리에 실패했습니다: " + error.message);
+            } finally {
+                modalConfirm.disabled = false;
+                modalConfirm.textContent = '승인';
+            }
         });
+
+        // --- 에러 메시지 표시 함수 ---
+        function showError(message) {
+            loadingRow.classList.add('hidden');
+            noDataRow.classList.add('hidden');
+            dbTableBody.innerHTML = ''; // 테이블 비우기
+            
+            errorText.textContent = message;
+            errorMessage.classList.remove('hidden');
+        }
 
     </script>
 </body>
