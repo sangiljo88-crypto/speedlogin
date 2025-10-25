@@ -10,95 +10,125 @@
     <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
-        .loader {
-            border-top-color: #3498db;
-            -webkit-animation: spin 1s linear infinite;
-            animation: spin 1s linear infinite;
-        }
-        @-webkit-keyframes spin {
-            0% { -webkit-transform: rotate(0deg); }
-            100% { -webkit-transform: rotate(360deg); }
-        }
-        @keyframes spin {
-            0% { transform: rotate(0deg); }
-            100% { transform: rotate(360deg); }
-        }
-        .modal {
-            display: none;
-            position: fixed;
-            z-index: 100;
-            left: 0;
-            top: 0;
-            width: 100%;
-            height: 100%;
-            overflow: auto;
-            background-color: rgba(0,0,0,0.4);
-        }
-        .modal-content {
-            background-color: #fefefe;
-            margin: 10% auto;
-            padding: 24px;
-            border-radius: 0.75rem;
-            width: 90%;
-            max-width: 500px;
-            box-shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.1), 0 2px 4px -1px rgba(0, 0, 0, 0.06);
-        }
-        .modal-body { margin-top: 16px; margin-bottom: 16px; }
-        .modal-footer { display: flex; justify-content: flex-end; gap: 8px; }
-        .calc-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
-        .calc-label { color: #6b7280; }
-        .calc-value { font-weight: 600; }
-        .calc-final { background: #f3f4f6; padding: 12px; border-radius: 0.5rem; margin-top: 12px; }
+        .loader { border-top-color: #3498db; animation: spinner 1.5s linear infinite; }
+        @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
+        .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 30px; border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .tab-button { padding: 12px 24px; font-weight: 500; border-bottom: 2px solid transparent; }
+        .tab-button.active { color: #4F46E5; border-bottom-color: #4F46E5; }
+        .tab-content { display: none; }
+        .tab-content.active { display: block; }
+        .paid-row { background-color: #f3f4f6; opacity: 0.7; }
     </style>
 </head>
-<body class="bg-gray-50">
-    <nav class="bg-white shadow-sm mb-8">
-        <div class="max-w-7xl mx-auto px-4 py-4 flex justify-between items-center">
-            <h1 class="text-2xl font-bold text-indigo-600">Admin Dashboard</h1>
-            <div class="flex items-center gap-4">
-                <span id="userEmail" class="text-sm text-gray-600"></span>
-                <button id="logoutBtn" class="text-sm bg-red-500 text-white px-4 py-2 rounded-lg hover:bg-red-600 transition">로그아웃</button>
+<body class="bg-gray-100">
+    <nav class="bg-white shadow-lg">
+        <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
+            <div class="flex justify-between h-16">
+                <div class="flex items-center">
+                    <h1 class="text-2xl font-bold text-indigo-600">Admin Dashboard</h1>
+                </div>
+                <div class="flex items-center gap-4">
+                    <span id="admin-email" class="text-sm text-gray-600"></span>
+                    <button id="logout-btn" class="bg-red-500 hover:bg-red-600 text-white px-4 py-2 rounded-md text-sm font-medium">로그아웃</button>
+                </div>
             </div>
         </div>
     </nav>
 
-    <div class="max-w-7xl mx-auto px-4">
-        <!-- 파트너 관리 섹션 -->
-        <div class="bg-white rounded-xl shadow-sm p-6 mb-6">
-            <h2 class="text-xl font-bold mb-4">파트너 수익률 관리</h2>
-            <p class="text-sm text-gray-600 mb-4">파트너별 수익률을 설정하세요. (입력 예: 20은 20%를 의미)</p>
-            <div id="partnersContainer" class="space-y-3">
-                <div class="text-sm text-gray-500">파트너 목록을 불러오는 중...</div>
+    <div class="max-w-7xl mx-auto py-6 sm:px-6 lg:px-8">
+        <!-- 탭 네비게이션 -->
+        <div class="bg-white shadow-sm rounded-t-xl">
+            <div class="border-b border-gray-200">
+                <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                    <button class="tab-button active" data-tab="approval">DB 승인 관리</button>
+                    <button class="tab-button" data-tab="settlement">월별 정산 관리</button>
+                </nav>
             </div>
         </div>
 
-        <!-- DB 승인 관리 -->
-        <div class="bg-white rounded-xl shadow-sm p-6">
-            <h2 class="text-xl font-bold mb-4">전체 DB 승인 관리</h2>
-            <p class="text-sm text-gray-600 mb-4">Tally에서 유입된 DB 목록을 확인하고 승인합니다.</p>
-            
-            <div id="loadingArea" class="text-center py-8">
-                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto mb-4"></div>
-                <p class="text-gray-600">데이터를 불러오는 중입니다...</p>
+        <!-- 탭 1: DB 승인 관리 -->
+        <div id="approval-tab" class="tab-content active bg-white shadow-lg rounded-b-xl p-6">
+            <!-- 파트너 수익률 관리 -->
+            <div class="mb-8">
+                <h2 class="text-xl font-bold mb-4">파트너 수익률 관리</h2>
+                <p class="text-sm text-gray-600 mb-4">파트너별 수익률을 설정하세요. (입력 예: 20은 20%를 의미)</p>
+                <div id="partnersContainer" class="space-y-3">
+                    <div class="text-sm text-gray-500">파트너 목록을 불러오는 중...</div>
+                </div>
             </div>
 
-            <div id="errorArea" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4"></div>
-            <div id="successArea" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4"></div>
+            <hr class="my-8">
 
-            <div id="tableContainer" class="hidden overflow-x-auto">
+            <!-- DB 승인 관리 -->
+            <div>
+                <h2 class="text-xl font-bold mb-4">전체 DB 승인 관리</h2>
+                <p class="text-sm text-gray-600 mb-4">Tally에서 유입된 DB 목록을 확인하고 승인합니다.</p>
+                
+                <div id="loadingArea" class="text-center py-8">
+                    <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto mb-4"></div>
+                    <p class="text-gray-600">데이터를 불러오는 중입니다...</p>
+                </div>
+
+                <div id="errorArea" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4"></div>
+                <div id="successArea" class="hidden bg-green-50 border border-green-200 text-green-700 px-4 py-3 rounded-lg mb-4"></div>
+
+                <div id="tableContainer" class="hidden overflow-x-auto">
+                    <table class="min-w-full divide-y divide-gray-200">
+                        <thead class="bg-gray-50">
+                            <tr>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제출 시간</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">고객 성함</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">영업 코드</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">판매금액</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">최종금액</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                                <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">관리</th>
+                            </tr>
+                        </thead>
+                        <tbody id="tableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                    </table>
+                </div>
+            </div>
+        </div>
+
+        <!-- 탭 2: 월별 정산 관리 -->
+        <div id="settlement-tab" class="tab-content bg-white shadow-lg rounded-b-xl p-6">
+            <div class="mb-6 flex justify-between items-center">
+                <div>
+                    <h2 class="text-xl font-bold">월별 정산 관리</h2>
+                    <p class="text-sm text-gray-600 mt-1">매월 1~말일 승인된 DB는 다음 달 10일에 정산합니다.</p>
+                </div>
+                <div>
+                    <label for="settlementMonth" class="block text-sm font-medium text-gray-700 mb-2">정산 월 선택</label>
+                    <select id="settlementMonth" class="px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                        <!-- 동적으로 생성 -->
+                    </select>
+                </div>
+            </div>
+
+            <div id="settlementLoadingArea" class="text-center py-8">
+                <div class="loader ease-linear rounded-full border-4 border-t-4 border-gray-200 h-12 w-12 mx-auto mb-4"></div>
+                <p class="text-gray-600">정산 데이터를 불러오는 중입니다...</p>
+            </div>
+
+            <div id="settlementErrorArea" class="hidden bg-red-50 border border-red-200 text-red-700 px-4 py-3 rounded-lg mb-4"></div>
+
+            <div id="settlementTableContainer" class="hidden overflow-x-auto">
                 <table class="min-w-full divide-y divide-gray-200">
                     <thead class="bg-gray-50">
                         <tr>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">제출 시간</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">고객 성함</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">영업 코드</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">판매금액</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">수익금</th>
-                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">상태</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">DB 건수</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">총 판매액</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">총 수익금</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">원천징수</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">최종 지급액</th>
+                            <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">입금 현황</th>
                             <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase">관리</th>
                         </tr>
                     </thead>
-                    <tbody id="tableBody" class="bg-white divide-y divide-gray-200"></tbody>
+                    <tbody id="settlementTableBody" class="bg-white divide-y divide-gray-200"></tbody>
                 </table>
             </div>
         </div>
@@ -117,44 +147,57 @@
                     <label class="block text-sm font-medium text-gray-700 mb-2">판매금액 (원)</label>
                     <input type="number" id="saleAmountInput" 
                            class="w-full px-3 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
-                           placeholder="예: 259000" min="0" step="1000">
+                           placeholder="예: 299000" min="0" step="1000">
                 </div>
 
-                <div id="calculationArea" class="hidden">
-                    <div class="calc-row">
-                        <span class="calc-label">판매금액</span>
-                        <span id="calcSaleAmount" class="calc-value"></span>
+                <div id="calculationArea" class="hidden bg-gray-50 p-4 rounded-lg">
+                    <div class="flex justify-between py-2 border-b">
+                        <span class="text-sm text-gray-600">판매금액</span>
+                        <span id="calcSaleAmount" class="text-sm font-semibold"></span>
                     </div>
-                    <div class="calc-row">
-                        <span class="calc-label">수익률</span>
-                        <span id="calcCommissionRate" class="calc-value"></span>
+                    <div class="flex justify-between py-2 border-b">
+                        <span class="text-sm text-gray-600">수익률</span>
+                        <span id="calcCommissionRate" class="text-sm font-semibold"></span>
                     </div>
-                    <div class="calc-row">
-                        <span class="calc-label">수익금</span>
-                        <span id="calcCommission" class="calc-value text-blue-600"></span>
+                    <div class="flex justify-between py-2 border-b">
+                        <span class="text-sm text-gray-600">수익금</span>
+                        <span id="calcCommission" class="text-sm font-semibold text-blue-600"></span>
                     </div>
-                    <div class="calc-row">
-                        <span class="calc-label">원천징수 (3.3%)</span>
-                        <span id="calcTax" class="calc-value text-red-600"></span>
+                    <div class="flex justify-between py-2 border-b">
+                        <span class="text-sm text-gray-600">원천징수 (3.3%)</span>
+                        <span id="calcTax" class="text-sm font-semibold text-red-600"></span>
                     </div>
-                    <div class="calc-final">
-                        <div class="flex justify-between">
-                            <span class="font-bold text-gray-700">최종 정산금액</span>
-                            <span id="calcFinalAmount" class="font-bold text-lg text-green-600"></span>
-                        </div>
+                    <div class="flex justify-between py-3 bg-white px-3 rounded mt-2">
+                        <span class="font-bold text-gray-700">최종 정산금액</span>
+                        <span id="calcFinalAmount" class="font-bold text-lg text-green-600"></span>
                     </div>
                 </div>
             </div>
-            <div class="modal-footer">
+            <div class="flex justify-end gap-2 mt-6">
                 <button id="modalCancelBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">취소</button>
                 <button id="modalApproveBtn" class="px-4 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">승인</button>
             </div>
         </div>
     </div>
 
+    <!-- 정산 상세 모달 -->
+    <div id="settlementDetailModal" class="modal">
+        <div class="modal-content">
+            <h3 class="text-lg font-bold mb-4">정산 상세 내역</h3>
+            <div class="mb-4">
+                <p class="text-sm text-gray-600">영업 코드: <span id="detailRefCode" class="font-semibold"></span></p>
+            </div>
+            <div id="settlementDetailTable" class="overflow-x-auto">
+                <!-- 동적 생성 -->
+            </div>
+            <div class="flex justify-end gap-2 mt-6">
+                <button id="detailModalCloseBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">닫기</button>
+            </div>
+        </div>
+    </div>
+
     <script>
-        // ==================== 설정 ====================
-        
+        // ==================== Firebase 설정 ====================
         const firebaseConfig = {
           apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
           authDomain: "speedlanding-dc186.firebaseapp.com",
@@ -167,14 +210,13 @@
         
         const GAS_URL = "/.netlify/functions/sheets-proxy";
         const ADMIN_EMAIL = "jsicoffee@naver.com";
-        const TAX_RATE = 0.033; // 3.3%
+        const TAX_RATE = 0.033;
 
         try {
           firebase.initializeApp(firebaseConfig);
           console.log("✅ Firebase 초기화 성공");
         } catch (error) {
           console.error("❌ Firebase 초기화 오류:", error);
-          alert("Firebase 초기화에 실패했습니다. 페이지를 새로고침해주세요.");
         }
 
         const auth = firebase.auth();
@@ -184,12 +226,13 @@
         let allDbs = [];
         let partnersData = {};
         let currentApprovalData = null;
+        let settlementData = [];
 
         // ==================== 로그인 체크 ====================
         auth.onAuthStateChanged((user) => {
             if (user) {
                 currentUser = user;
-                document.getElementById('userEmail').textContent = user.email;
+                document.getElementById('admin-email').textContent = user.email;
                 
                 if (user.email !== ADMIN_EMAIL) {
                     alert("관리자 권한이 없습니다.");
@@ -200,15 +243,36 @@
                 
                 loadPartnersData();
                 loadAllDbs();
+                initializeSettlementMonths();
             } else {
                 window.location.href = "index.html";
             }
         });
 
         // ==================== 로그아웃 ====================
-        document.getElementById('logoutBtn').addEventListener('click', () => {
+        document.getElementById('logout-btn').addEventListener('click', () => {
             auth.signOut().then(() => {
                 window.location.href = "index.html";
+            });
+        });
+
+        // ==================== 탭 전환 ====================
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                // 탭 버튼 활성화
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // 탭 컨텐츠 표시
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+
+                // 정산 탭으로 전환 시 데이터 로드
+                if (tabName === 'settlement') {
+                    loadSettlementData();
+                }
             });
         });
 
@@ -226,7 +290,7 @@
 
                 snapshot.forEach(doc => {
                     const data = doc.data();
-                    if (!data.referralCode) return; // referralCode가 없으면 스킵
+                    if (!data.referralCode) return;
                     
                     partnersData[data.referralCode] = {
                         id: doc.id,
@@ -261,8 +325,6 @@
 
             } catch (error) {
                 console.error("파트너 데이터 로드 실패:", error);
-                document.getElementById('partnersContainer').innerHTML = 
-                    '<div class="text-sm text-red-500">파트너 데이터를 불러오는데 실패했습니다.</div>';
             }
         }
 
@@ -294,7 +356,6 @@
             try {
                 showLoading(true);
                 hideError();
-                hideSuccess();
 
                 const response = await fetch(`${GAS_URL}?action=getAllDbs`);
                 const result = await response.json();
@@ -385,7 +446,6 @@
             document.getElementById('approvalModal').style.display = 'block';
         };
 
-        // 판매금액 입력 시 자동 계산
         document.getElementById('saleAmountInput').addEventListener('input', function() {
             const saleAmount = parseInt(this.value);
             if (saleAmount > 0) {
@@ -462,6 +522,172 @@
             }
         });
 
+        // ==================== 월별 정산 ====================
+        function initializeSettlementMonths() {
+            const select = document.getElementById('settlementMonth');
+            const now = new Date();
+            
+            // 최근 6개월 생성
+            for (let i = 0; i < 6; i++) {
+                const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
+                const value = `${date.getFullYear()}-${String(date.getMonth() + 1).padStart(2, '0')}`;
+                const text = `${date.getFullYear()}년 ${date.getMonth() + 1}월`;
+                
+                const option = document.createElement('option');
+                option.value = value;
+                option.textContent = text;
+                select.appendChild(option);
+            }
+
+            select.addEventListener('change', loadSettlementData);
+        }
+
+        async function loadSettlementData() {
+            const month = document.getElementById('settlementMonth').value;
+            if (!month) return;
+
+            try {
+                showSettlementLoading(true);
+                hideSettlementError();
+
+                const response = await fetch(`${GAS_URL}?action=getMonthlySettlement&month=${month}`);
+                const result = await response.json();
+
+                if (!result.success) {
+                    throw new Error(result.message || "정산 데이터를 불러올 수 없습니다.");
+                }
+
+                settlementData = result.data;
+                renderSettlementTable();
+                showSettlementLoading(false);
+
+            } catch (error) {
+                console.error("정산 데이터 로드 실패:", error);
+                showSettlementError("정산 데이터를 불러오는데 실패했습니다: " + error.message);
+                showSettlementLoading(false);
+            }
+        }
+
+        function renderSettlementTable() {
+            const tbody = document.getElementById('settlementTableBody');
+            tbody.innerHTML = '';
+
+            if (settlementData.length === 0) {
+                tbody.innerHTML = '<tr><td colspan="8" class="px-6 py-4 text-center text-gray-500">해당 월에 정산할 데이터가 없습니다.</td></tr>';
+                document.getElementById('settlementTableContainer').classList.remove('hidden');
+                return;
+            }
+
+            settlementData.forEach(item => {
+                const row = document.createElement('tr');
+                const allPaid = item.paidCount === item.dbCount;
+                row.className = allPaid ? 'paid-row' : 'hover:bg-gray-50';
+
+                row.innerHTML = `
+                    <td class="px-6 py-4 text-sm font-medium text-gray-900">${item.referralCode}</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">${item.dbCount}건</td>
+                    <td class="px-6 py-4 text-sm text-gray-900">₩${item.totalSales.toLocaleString()}</td>
+                    <td class="px-6 py-4 text-sm text-blue-600 font-semibold">₩${item.totalCommission.toLocaleString()}</td>
+                    <td class="px-6 py-4 text-sm text-red-600">-₩${item.totalTax.toLocaleString()}</td>
+                    <td class="px-6 py-4 text-sm text-green-600 font-bold">₩${item.totalFinalAmount.toLocaleString()}</td>
+                    <td class="px-6 py-4 text-sm">
+                        <span class="px-2 py-1 text-xs font-semibold rounded-full ${allPaid ? 'bg-green-100 text-green-800' : 'bg-yellow-100 text-yellow-800'}">
+                            ${item.paidCount}/${item.dbCount} 완료
+                        </span>
+                    </td>
+                    <td class="px-6 py-4">
+                        <button onclick="openSettlementDetail('${item.referralCode}')" 
+                                class="px-3 py-1 text-sm bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition">
+                            상세보기
+                        </button>
+                    </td>
+                `;
+                tbody.appendChild(row);
+            });
+
+            document.getElementById('settlementTableContainer').classList.remove('hidden');
+        }
+
+        window.openSettlementDetail = function(refCode) {
+            const item = settlementData.find(s => s.referralCode === refCode);
+            if (!item) return;
+
+            document.getElementById('detailRefCode').textContent = refCode;
+
+            const tableHtml = `
+                <table class="min-w-full divide-y divide-gray-200">
+                    <thead class="bg-gray-50">
+                        <tr>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">DB 유입일</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">승인일</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">고객명</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">판매금액</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">정산액</th>
+                            <th class="px-4 py-2 text-left text-xs font-medium text-gray-500">입금여부</th>
+                        </tr>
+                    </thead>
+                    <tbody class="bg-white divide-y divide-gray-200">
+                        ${item.details.map(detail => {
+                            const paid = detail.paymentStatus === '입금완료';
+                            return `
+                                <tr class="${paid ? 'bg-gray-100' : ''}">
+                                    <td class="px-4 py-2 text-sm">${detail.submittedAt || 'N/A'}</td>
+                                    <td class="px-4 py-2 text-sm">${detail.approvedAt ? new Date(detail.approvedAt).toLocaleDateString('ko-KR') : 'N/A'}</td>
+                                    <td class="px-4 py-2 text-sm">${detail.customerName || 'N/A'}</td>
+                                    <td class="px-4 py-2 text-sm">₩${(detail.saleAmount || 0).toLocaleString()}</td>
+                                    <td class="px-4 py-2 text-sm text-green-600 font-semibold">₩${(detail.finalAmount || 0).toLocaleString()}</td>
+                                    <td class="px-4 py-2 text-sm">
+                                        <input type="checkbox" 
+                                               ${paid ? 'checked' : ''}
+                                               onchange="togglePaymentStatus(${detail.rowNumber}, this.checked)"
+                                               class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                        <span class="ml-2 text-xs ${paid ? 'text-green-600' : 'text-gray-500'}">
+                                            ${paid ? '입금완료' : '대기중'}
+                                        </span>
+                                    </td>
+                                </tr>
+                            `;
+                        }).join('')}
+                    </tbody>
+                </table>
+            `;
+
+            document.getElementById('settlementDetailTable').innerHTML = tableHtml;
+            document.getElementById('settlementDetailModal').style.display = 'block';
+        };
+
+        window.togglePaymentStatus = async function(rowNumber, checked) {
+            const paymentStatus = checked ? '입금완료' : '대기중';
+            
+            try {
+                const response = await fetch(GAS_URL, {
+                    method: 'POST',
+                    headers: { 'Content-Type': 'application/json' },
+                    body: JSON.stringify({
+                        action: 'updatePaymentStatus',
+                        rowNumber: rowNumber,
+                        paymentStatus: paymentStatus,
+                        paymentDate: checked ? new Date().toISOString() : null
+                    })
+                });
+
+                const result = await response.json();
+
+                if (result.success) {
+                    loadSettlementData(); // 정산 데이터 새로고침
+                } else {
+                    throw new Error(result.message || '업데이트 실패');
+                }
+            } catch (error) {
+                console.error('입금 상태 업데이트 실패:', error);
+                alert('입금 상태 업데이트에 실패했습니다.');
+            }
+        };
+
+        document.getElementById('detailModalCloseBtn').addEventListener('click', () => {
+            document.getElementById('settlementDetailModal').style.display = 'none';
+        });
+
         // ==================== UI 헬퍼 ====================
         function showLoading(show) {
             document.getElementById('loadingArea').classList.toggle('hidden', !show);
@@ -484,8 +710,18 @@
             setTimeout(() => successArea.classList.add('hidden'), 3000);
         }
 
-        function hideSuccess() {
-            document.getElementById('successArea').classList.add('hidden');
+        function showSettlementLoading(show) {
+            document.getElementById('settlementLoadingArea').classList.toggle('hidden', !show);
+        }
+
+        function showSettlementError(message) {
+            const errorArea = document.getElementById('settlementErrorArea');
+            errorArea.textContent = message;
+            errorArea.classList.remove('hidden');
+        }
+
+        function hideSettlementError() {
+            document.getElementById('settlementErrorArea').classList.add('hidden');
         }
     </script>
 </body>

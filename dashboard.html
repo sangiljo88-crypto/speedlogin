@@ -76,16 +76,16 @@
                 </div>
             </header>
 
-            <!-- 수익 현황 -->
+            <!-- 수익 현황 (4개 카드) -->
             <section class="mb-10">
-                <h3 class="text-2xl font-semibold text-gray-900 mb-4">수익 현황</h3>
+                <h3 class="text-2xl font-semibold text-gray-900 mb-4">이번 달 수익 현황</h3>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500">이번 달 총 판매액</h4>
+                        <h4 class="text-sm font-medium text-gray-500">총 판매액</h4>
                         <p id="current-month-sales" class="mt-2 text-3xl font-bold text-gray-900">₩0</p>
                     </div>
                     <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500">이번 달 총 수익금</h4>
+                        <h4 class="text-sm font-medium text-gray-500">총 수익금</h4>
                         <p id="current-month-commission" class="mt-2 text-3xl font-bold text-blue-600">₩0</p>
                         <p class="text-xs text-gray-500 mt-1">원천징수 전</p>
                     </div>
@@ -130,13 +130,14 @@
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">고객 성함</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">판매금액</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수익금</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">최종금액</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">원천징수</th>
+                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">정산예정액</th>
                                     <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
                                 </tr>
                             </thead>
                             <tbody id="db-list-tbody" class="bg-white divide-y divide-gray-200">
                                 <tr>
-                                    <td colspan="6" class="px-6 py-8 text-center text-gray-500">아직 유입된 DB가 없습니다.</td>
+                                    <td colspan="7" class="px-6 py-8 text-center text-gray-500">아직 유입된 DB가 없습니다.</td>
                                 </tr>
                             </tbody>
                         </table>
@@ -160,7 +161,7 @@
         };
         
         const GAS_URL = "/.netlify/functions/sheets-proxy";
-        const BASE_URL = "https://brandforyou.kr";
+        const BASE_URL = "https://speedlogin.netlify.app";
 
         try {
           firebase.initializeApp(firebaseConfig);
@@ -304,7 +305,7 @@
             tbody.innerHTML = '';
 
             if (myDbs.length === 0) {
-                tbody.innerHTML = '<tr><td colspan="6" class="px-6 py-8 text-center text-gray-500">아직 유입된 DB가 없습니다.</td></tr>';
+                tbody.innerHTML = '<tr><td colspan="7" class="px-6 py-8 text-center text-gray-500">아직 유입된 DB가 없습니다.</td></tr>';
                 return;
             }
 
@@ -317,13 +318,19 @@
                 
                 const saleAmount = db.saleAmount ? `₩${parseInt(db.saleAmount).toLocaleString()}` : '미입력';
                 const commission = db.commission ? `₩${parseInt(db.commission).toLocaleString()}` : '₩0';
+                const commissionRate = db.commissionRate ? `(${db.commissionRate}%)` : '';
+                const withholdingTax = db.withholdingTax ? `₩${parseInt(db.withholdingTax).toLocaleString()}` : '₩0';
                 const finalAmount = db.finalAmount ? `₩${parseInt(db.finalAmount).toLocaleString()}` : '₩0';
 
                 row.innerHTML = `
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${db.submittedAt || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${db.customerName || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${saleAmount}</td>
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">${commission}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">
+                        ${commission}
+                        <span class="text-xs text-gray-500">${commissionRate}</span>
+                    </td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-red-600">${withholdingTax}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-green-600 font-bold">${finalAmount}</td>
                     <td class="px-6 py-4 whitespace-nowrap">
                         <span class="px-2 inline-flex text-xs leading-5 font-semibold rounded-full ${statusClass}">
