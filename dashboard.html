@@ -79,7 +79,7 @@
             <!-- 수익 현황 (4개 카드) -->
             <section class="mb-10">
                 <h3 class="text-2xl font-semibold text-gray-900 mb-2">이번 달 수익 현황</h3>
-                <p class="text-sm text-gray-600 mb-4">지급 예정일: <span id="payment-date" class="font-semibold text-indigo-600">다음 달 10일</span></p>
+                <p class="text-sm text-gray-600 mb-4">지급 예정일: <span id="payment-date" class="font-semibold text-indigo-600">익월 10일</span></p>
                 <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
                     <div class="bg-white shadow-lg rounded-xl p-6">
                         <h4 class="text-sm font-medium text-gray-500">총 판매액</h4>
@@ -163,7 +163,7 @@
         };
         
         const GAS_URL = "/.netlify/functions/sheets-proxy";
-        const BASE_URL = "https://speedlogin.netlify.app";
+        const BASE_URL = "https://brandforyou.kr"; // ⭐ 변경!
 
         try {
           firebase.initializeApp(firebaseConfig);
@@ -177,6 +177,47 @@
         let currentUser = null;
         let myDbs = [];
         let myReferralCode = null;
+
+        // ==================== 한국 시간 포맷팅 ====================
+        function formatKoreanDateTime(dateString) {
+            if (!dateString) return 'N/A';
+            
+            try {
+                const date = new Date(dateString);
+                
+                // 한국 시간으로 표시
+                return date.toLocaleString('ko-KR', { 
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit',
+                    hour: '2-digit',
+                    minute: '2-digit',
+                    hour12: false
+                }).replace(/\. /g, '-').replace('.', '');
+            } catch (error) {
+                console.error('날짜 포맷 오류:', error);
+                return dateString;
+            }
+        }
+
+        function formatKoreanDate(dateString) {
+            if (!dateString) return '-';
+            
+            try {
+                const date = new Date(dateString);
+                
+                return date.toLocaleDateString('ko-KR', { 
+                    timeZone: 'Asia/Seoul',
+                    year: 'numeric',
+                    month: '2-digit',
+                    day: '2-digit'
+                }).replace(/\. /g, '-').replace('.', '');
+            } catch (error) {
+                console.error('날짜 포맷 오류:', error);
+                return dateString;
+            }
+        }
 
         // ==================== 로그인 체크 ====================
         auth.onAuthStateChanged(async (user) => {
@@ -228,8 +269,14 @@
         // ==================== DB 데이터 로드 ====================
         async function loadMyDbs() {
             try {
+                console.log(`📊 DB 데이터 로드 시작: ${myReferralCode}`);
+                const startTime = performance.now();
+
                 const response = await fetch(`${GAS_URL}?action=getDbsByRef&ref=${myReferralCode}`);
                 const result = await response.json();
+
+                const endTime = performance.now();
+                console.log(`✅ DB 데이터 로드 완료 (${Math.round(endTime - startTime)}ms)`);
 
                 if (!result.success) {
                     throw new Error(result.message || "데이터를 불러올 수 없습니다.");
@@ -294,7 +341,7 @@
 
             // 지급 예정일 표시 (이번 달 승인 건은 다음 달 10일)
             const paymentDate = new Date(currentYear, currentMonth + 1, 10);
-            const paymentDateStr = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}-10`;
+            const paymentDateStr = formatKoreanDate(paymentDate);
             document.getElementById('payment-date').textContent = `${paymentDateStr} (익월 10일)`;
 
             // UI 업데이트
@@ -335,16 +382,19 @@
                 const withholdingTax = db.withholdingTax ? `₩${parseInt(db.withholdingTax).toLocaleString()}` : '₩0';
                 const finalAmount = db.finalAmount ? `₩${parseInt(db.finalAmount).toLocaleString()}` : '₩0';
                 
+                // 제출 시간 - 한국 시간으로 포맷
+                const submittedAt = formatKoreanDateTime(db.submittedAt);
+                
                 // 지급 예정일 계산 (승인일 기준 다음 달 10일)
                 let paymentDateStr = '-';
                 if (db.approvedAt) {
                     const approvedDate = new Date(db.approvedAt);
                     const paymentDate = new Date(approvedDate.getFullYear(), approvedDate.getMonth() + 1, 10);
-                    paymentDateStr = `${paymentDate.getFullYear()}-${String(paymentDate.getMonth() + 1).padStart(2, '0')}-10`;
+                    paymentDateStr = formatKoreanDate(paymentDate);
                 }
 
                 row.innerHTML = `
-                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${db.submittedAt || 'N/A'}</td>
+                    <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${submittedAt}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${db.customerName || 'N/A'}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-gray-900">${saleAmount}</td>
                     <td class="px-6 py-4 whitespace-nowrap text-sm text-blue-600 font-semibold">
