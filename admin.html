@@ -612,8 +612,11 @@ async function loadPartnerStats() {
         showPartnerLoading(true);
         hidePartnerError();
 
+        console.log(`📊 영업자별 통계 로드: ${month}`);
         const response = await fetch(`${GAS_URL}?action=getPartnerStats&month=${month}`);
         const result = await response.json();
+
+        console.log('📥 응답:', result);
 
         if (!result.success) {
             throw new Error(result.message || "영업자 데이터를 불러올 수 없습니다.");
@@ -706,8 +709,11 @@ async function loadSettlementData() {
         showSettlementLoading(true);
         hideSettlementError();
 
+        console.log(`💰 정산 데이터 로드: ${month}`);
         const response = await fetch(`${GAS_URL}?action=getMonthlySettlement&month=${month}`);
         const result = await response.json();
+
+        console.log('📥 응답:', result);
 
         if (!result.success) {
             throw new Error(result.message || "정산 데이터를 불러올 수 없습니다.");
@@ -793,13 +799,15 @@ window.openSettlementDetail = function(refCode) {
                             <td class="px-4 py-2 text-sm">₩${(detail.saleAmount || 0).toLocaleString()}</td>
                             <td class="px-4 py-2 text-sm text-green-600 font-semibold">₩${(detail.finalAmount || 0).toLocaleString()}</td>
                             <td class="px-4 py-2 text-sm">
-                                <input type="checkbox" 
-                                       ${paid ? 'checked' : ''}
-                                       onchange="togglePaymentStatus(${detail.rowNumber}, this.checked)"
-                                       class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
-                                <span class="ml-2 text-xs ${paid ? 'text-green-600' : 'text-gray-500'}">
-                                    ${paid ? '입금완료' : '대기중'}
-                                </span>
+                                <label class="flex items-center cursor-pointer">
+                                    <input type="checkbox" 
+                                           ${paid ? 'checked' : ''}
+                                           onchange="togglePaymentStatus(${detail.rowNumber}, this.checked)"
+                                           class="h-4 w-4 text-indigo-600 focus:ring-indigo-500 border-gray-300 rounded">
+                                    <span class="ml-2 text-xs ${paid ? 'text-green-600 font-semibold' : 'text-gray-500'}">
+                                        ${paid ? '입금완료' : '대기중'}
+                                    </span>
+                                </label>
                             </td>
                         </tr>
                     `;
@@ -812,8 +820,11 @@ window.openSettlementDetail = function(refCode) {
     document.getElementById('settlementDetailModal').style.display = 'block';
 };
 
+// ==================== 입금 상태 토글 (즉시 반영!) ====================
 window.togglePaymentStatus = async function(rowNumber, checked) {
     const paymentStatus = checked ? '입금완료' : '대기중';
+    
+    console.log(`💳 입금 상태 변경: 행 ${rowNumber} → ${paymentStatus}`);
     
     try {
         const response = await fetch(GAS_URL, {
@@ -828,16 +839,26 @@ window.togglePaymentStatus = async function(rowNumber, checked) {
         });
 
         const result = await response.json();
+        console.log('📥 입금 상태 응답:', result);
 
         if (result.success) {
-            console.log('✅ 입금 상태 업데이트 성공');
-            loadSettlementData(); // 정산 데이터 새로고침
+            console.log('✅ 입금 상태 업데이트 성공!');
+            
+            // 모달 닫기
+            document.getElementById('settlementDetailModal').style.display = 'none';
+            
+            // 성공 메시지
+            showSuccess(`입금 상태가 "${paymentStatus}"(으)로 변경되었습니다.`);
+            
+            // 전체 정산 데이터 새로고침
+            await loadSettlementData();
+            
         } else {
             throw new Error(result.message || '업데이트 실패');
         }
     } catch (error) {
-        console.error('입금 상태 업데이트 실패:', error);
-        alert('입금 상태 업데이트에 실패했습니다.');
+        console.error('❌ 입금 상태 업데이트 실패:', error);
+        alert('입금 상태 업데이트에 실패했습니다: ' + error.message);
     }
 };
 
