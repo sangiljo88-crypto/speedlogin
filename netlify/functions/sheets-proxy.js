@@ -1,65 +1,70 @@
-// Netlify Functions 프록시 - Google Apps Script CORS 우회
-// 경로: netlify/functions/sheets-proxy.js
+// Netlify Function: sheets-proxy.js
+// Google Apps Script로 프록시 요청을 전달합니다.
+
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbxXZKqAvKarV64L52T-V6GR2y4OLWiYENYQrTZi-mOxUQdCQZRdeIHa4e5yUFTE7sc/exec";
 
 exports.handler = async (event, context) => {
   // CORS 헤더 설정
   const headers = {
-    'Access-Control-Allow-Origin': '*',
-    'Access-Control-Allow-Headers': 'Content-Type',
-    'Access-Control-Allow-Methods': 'GET, POST, OPTIONS'
+    "Access-Control-Allow-Origin": "*",
+    "Access-Control-Allow-Headers": "Content-Type",
+    "Access-Control-Allow-Methods": "GET, POST, OPTIONS",
+    "Content-Type": "application/json"
   };
 
-  // OPTIONS preflight 요청 처리
-  if (event.httpMethod === 'OPTIONS') {
+  // OPTIONS 요청 처리 (CORS preflight)
+  if (event.httpMethod === "OPTIONS") {
     return {
       statusCode: 200,
       headers,
-      body: ''
+      body: ""
     };
   }
 
   try {
-    // Google Apps Script URL
-    const GAS_URL = 'https://script.google.com/macros/s/AKfycbw8sZ0SKq-vMRMEsO9CM2lL01HnuILndV3nVTPXJfb3tj_MO5zjWMrMNOfIKVuFwKxw/exec';
+    let url = GOOGLE_SCRIPT_URL;
+    let options = {
+      method: event.httpMethod,
+      headers: {
+        "Content-Type": "application/json"
+      }
+    };
 
-    let fetchUrl;
-    let fetchOptions = {};
-
-    if (event.httpMethod === 'GET') {
-      // GET 요청 - 쿼리 파라미터 그대로 전달
-      const queryString = event.rawQuery || '';
-      fetchUrl = `${GAS_URL}?${queryString}`;
-      
-    } else if (event.httpMethod === 'POST') {
-      // POST 요청
-      fetchUrl = GAS_URL;
-      fetchOptions = {
-        method: 'POST',
-        headers: {
-          'Content-Type': 'application/json'
-        },
-        body: event.body
-      };
+    // GET 요청: 쿼리 파라미터를 URL에 추가
+    if (event.httpMethod === "GET") {
+      const params = new URLSearchParams(event.queryStringParameters);
+      url = `${GOOGLE_SCRIPT_URL}?${params.toString()}`;
     }
 
-    // Google Apps Script 호출
-    const response = await fetch(fetchUrl, fetchOptions);
+    // POST 요청: body 데이터 전달
+    if (event.httpMethod === "POST") {
+      options.body = event.body;
+    }
+
+    console.log(`📤 Proxying ${event.httpMethod} request to Google Apps Script`);
+    console.log(`🔗 URL: ${url}`);
+
+    // Google Apps Script로 요청 전달
+    const response = await fetch(url, options);
     const data = await response.text();
 
+    console.log(`✅ Response received from Google Apps Script`);
+
     return {
-      statusCode: 200,
+      statusCode: response.status,
       headers,
       body: data
     };
 
   } catch (error) {
-    console.error('Proxy Error:', error);
+    console.error("❌ Error in sheets-proxy:", error);
+    
     return {
       statusCode: 500,
       headers,
-      body: JSON.stringify({ 
-        success: false, 
-        message: 'Proxy error: ' + error.message 
+      body: JSON.stringify({
+        success: false,
+        message: "Proxy error: " + error.message
       })
     };
   }
