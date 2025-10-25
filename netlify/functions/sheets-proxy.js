@@ -1,7 +1,7 @@
 // Netlify Function: sheets-proxy.js
 // Google Apps Script로 프록시 요청을 전달합니다.
 
-const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycby27fD-10Q9czI1Eg6uWEmb6ApWkAhNYT7QFIELdelDgwa_klkmHd5RtgYrhvrYJh8_/exec";
+const GOOGLE_SCRIPT_URL = "https://script.google.com/macros/s/AKfycbyu4iiHwC5q43VshCFGr2DFxsohBCqJqg5psrIy4mqtyqLg9GkQC2UDbo0dyeUPYxOT/exec";
 
 exports.handler = async (event, context) => {
   // CORS 헤더 설정
