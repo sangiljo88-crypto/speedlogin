@@ -23,6 +23,22 @@
             0% { transform: rotate(0deg); }
             100% { transform: rotate(360deg); }
         }
+        .tab-button {
+            padding: 12px 24px;
+            font-weight: 500;
+            border-bottom: 2px solid transparent;
+            transition: all 0.3s;
+        }
+        .tab-button.active {
+            color: #4F46E5;
+            border-bottom-color: #4F46E5;
+        }
+        .tab-content {
+            display: none;
+        }
+        .tab-content.active {
+            display: block;
+        }
     </style>
 </head>
 <body class="bg-gray-100 min-h-screen">
@@ -58,94 +74,217 @@
                 <span id="error-text" class="block sm:inline"></span>
             </div>
 
-            <header class="mb-8 md:flex md:items-center md:justify-between">
-                <div>
-                    <h2 id="welcome-title" class="text-3xl font-bold leading-7 text-gray-900 sm:text-4xl sm:truncate">
-                        파트너님의 대시보드
-                    </h2>
-                    <p class="mt-1 text-lg text-gray-500">파트너님의 실적을 확인하세요.</p>
+            <div id="success-message" class="hidden bg-green-100 border border-green-400 text-green-700 px-4 py-3 rounded-lg relative mb-6" role="alert">
+                <span id="success-text" class="block sm:inline"></span>
+            </div>
+
+            <!-- 탭 버튼 -->
+            <div class="bg-white shadow-sm rounded-t-xl mb-0">
+                <div class="border-b border-gray-200">
+                    <nav class="flex space-x-8 px-6" aria-label="Tabs">
+                        <button class="tab-button active" data-tab="dashboard">📊 대시보드</button>
+                        <button class="tab-button" data-tab="profile">👤 내 정보</button>
+                    </nav>
                 </div>
-                <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
-                    <label for="ref-link" class="block text-sm font-medium text-gray-700">내 영업 링크</label>
-                    <div class="mt-1 flex rounded-md shadow-sm">
-                        <input type="text" id="ref-link" readonly class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-l-md sm:text-sm border-gray-300 bg-gray-50 p-2">
-                        <button id="copy-link-button" type="button" class="-ml-px relative inline-flex items-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none">
-                            <span>복사</span>
+            </div>
+
+            <!-- 대시보드 탭 -->
+            <div id="dashboard-tab" class="tab-content active bg-white shadow-lg rounded-b-xl p-6">
+                <header class="mb-8 md:flex md:items-center md:justify-between">
+                    <div>
+                        <h2 id="welcome-title" class="text-3xl font-bold leading-7 text-gray-900 sm:text-4xl sm:truncate">
+                            파트너님의 대시보드
+                        </h2>
+                        <p class="mt-1 text-lg text-gray-500">파트너님의 실적을 확인하세요.</p>
+                    </div>
+                    <div class="mt-4 md:mt-0 md:ml-4 flex-shrink-0">
+                        <label for="ref-link" class="block text-sm font-medium text-gray-700">내 영업 링크</label>
+                        <div class="mt-1 flex rounded-md shadow-sm">
+                            <input type="text" id="ref-link" readonly class="focus:ring-indigo-500 focus:border-indigo-500 flex-1 block w-full rounded-none rounded-l-md sm:text-sm border-gray-300 bg-gray-50 p-2">
+                            <button id="copy-link-button" type="button" class="-ml-px relative inline-flex items-center space-x-2 px-4 py-2 border border-gray-300 text-sm font-medium rounded-r-md text-gray-700 bg-gray-50 hover:bg-gray-100 focus:outline-none">
+                                <span>복사</span>
+                            </button>
+                        </div>
+                    </div>
+                </header>
+
+                <!-- 경고 메시지 (정보 미입력 시) -->
+                <div id="profile-warning" class="hidden bg-yellow-50 border-l-4 border-yellow-400 p-4 mb-6">
+                    <div class="flex">
+                        <div class="flex-shrink-0">
+                            <svg class="h-5 w-5 text-yellow-400" viewBox="0 0 20 20" fill="currentColor">
+                                <path fill-rule="evenodd" d="M8.257 3.099c.765-1.36 2.722-1.36 3.486 0l5.58 9.92c.75 1.334-.213 2.98-1.742 2.98H4.42c-1.53 0-2.493-1.646-1.743-2.98l5.58-9.92zM11 13a1 1 0 11-2 0 1 1 0 012 0zm-1-8a1 1 0 00-1 1v3a1 1 0 002 0V6a1 1 0 00-1-1z" clip-rule="evenodd" />
+                            </svg>
+                        </div>
+                        <div class="ml-3">
+                            <p class="text-sm text-yellow-700">
+                                정산을 받으려면 <strong>"내 정보"</strong> 탭에서 이름, 연락처, 계좌 정보를 등록해주세요!
+                            </p>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- 수익 현황 (4개 카드) -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-2">이번 달 수익 현황</h3>
+                    <p class="text-sm text-gray-600 mb-4">지급 예정일: <span id="payment-date" class="font-semibold text-indigo-600">익월 10일</span></p>
+                    <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
+                        <div class="bg-white shadow-lg rounded-xl p-6">
+                            <h4 class="text-sm font-medium text-gray-500">총 판매액</h4>
+                            <p id="current-month-sales" class="mt-2 text-3xl font-bold text-gray-900">₩0</p>
+                        </div>
+                        <div class="bg-white shadow-lg rounded-xl p-6">
+                            <h4 class="text-sm font-medium text-gray-500">총 수익금</h4>
+                            <p id="current-month-commission" class="mt-2 text-3xl font-bold text-blue-600">₩0</p>
+                            <p class="text-xs text-gray-500 mt-1">원천징수 전</p>
+                        </div>
+                        <div class="bg-white shadow-lg rounded-xl p-6">
+                            <h4 class="text-sm font-medium text-gray-500">원천징수 합계</h4>
+                            <p id="current-month-tax" class="mt-2 text-3xl font-bold text-red-600">₩0</p>
+                            <p class="text-xs text-gray-500 mt-1">3.3%</p>
+                        </div>
+                        <div class="bg-white shadow-lg rounded-xl p-6">
+                            <h4 class="text-sm font-medium text-gray-500">최종 정산 예정액</h4>
+                            <p id="current-month-final" class="mt-2 text-3xl font-bold text-green-600">₩0</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DB 유입 현황 -->
+                <section class="mb-10">
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">DB 유입 현황</h3>
+                    <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
+                        <div class="bg-white shadow-lg rounded-xl p-6">
+                            <h4 class="text-sm font-medium text-gray-500">이번 달 총 DB 유입</h4>
+                            <p id="current-month-db-count" class="mt-2 text-4xl font-bold text-gray-900">0 건</p>
+                            <p id="current-month-db-detail" class="mt-1 text-sm text-gray-500">(승인 0건)</p>
+                        </div>
+                        <div class="bg-white shadow-lg rounded-xl p-6">
+                            <h4 class="text-sm font-medium text-gray-500">누적 총 DB 유입</h4>
+                            <p id="total-db-count" class="mt-2 text-4xl font-bold text-gray-900">0 건</p>
+                            <p id="total-db-detail" class="mt-1 text-sm text-gray-500">(승인 0건)</p>
+                        </div>
+                    </div>
+                </section>
+
+                <!-- DB 목록 -->
+                <section>
+                    <h3 class="text-2xl font-semibold text-gray-900 mb-4">내 DB 목록 (최신순)</h3>
+                    <div class="bg-white shadow-lg rounded-xl overflow-hidden">
+                        <div class="overflow-x-auto">
+                            <table class="min-w-full divide-y divide-gray-200">
+                                <thead class="bg-gray-50">
+                                    <tr>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제출 시간</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">고객 성함</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">판매금액</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수익금</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">원천징수</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">정산예정액</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">지급예정일</th>
+                                        <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="db-list-tbody" class="bg-white divide-y divide-gray-200">
+                                    <tr>
+                                        <td colspan="8" class="px-6 py-8 text-center text-gray-500">아직 유입된 DB가 없습니다.</td>
+                                    </tr>
+                                </tbody>
+                            </table>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- 내 정보 탭 -->
+            <div id="profile-tab" class="tab-content bg-white shadow-lg rounded-b-xl p-6">
+                <h2 class="text-2xl font-bold text-gray-900 mb-6">내 정보</h2>
+                
+                <div class="max-w-2xl">
+                    <!-- 기본 정보 -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-indigo-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 7a4 4 0 11-8 0 4 4 0 018 0zM12 14a7 7 0 00-7 7h14a7 7 0 00-7-7z"></path>
+                            </svg>
+                            기본 정보
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="fullName" class="block text-sm font-medium text-gray-700 mb-2">이름 (실명) *</label>
+                                <input type="text" id="fullName" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                       placeholder="홍길동">
+                            </div>
+                            <div>
+                                <label for="phoneNumber" class="block text-sm font-medium text-gray-700 mb-2">연락처 *</label>
+                                <input type="tel" id="phoneNumber" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                       placeholder="010-1234-5678">
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- 정산 계좌 정보 -->
+                    <div class="mb-8">
+                        <h3 class="text-lg font-semibold text-gray-900 mb-4 flex items-center">
+                            <svg class="w-5 h-5 mr-2 text-green-600" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 10h18M7 15h1m4 0h1m-7 4h12a3 3 0 003-3V8a3 3 0 00-3-3H6a3 3 0 00-3 3v8a3 3 0 003 3z"></path>
+                            </svg>
+                            정산 계좌 정보
+                        </h3>
+                        <div class="space-y-4">
+                            <div>
+                                <label for="bankName" class="block text-sm font-medium text-gray-700 mb-2">은행명 *</label>
+                                <select id="bankName" 
+                                        class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500">
+                                    <option value="">은행 선택</option>
+                                    <option value="KB국민은행">KB국민은행</option>
+                                    <option value="신한은행">신한은행</option>
+                                    <option value="우리은행">우리은행</option>
+                                    <option value="하나은행">하나은행</option>
+                                    <option value="NH농협은행">NH농협은행</option>
+                                    <option value="IBK기업은행">IBK기업은행</option>
+                                    <option value="SC제일은행">SC제일은행</option>
+                                    <option value="카카오뱅크">카카오뱅크</option>
+                                    <option value="토스뱅크">토스뱅크</option>
+                                    <option value="케이뱅크">케이뱅크</option>
+                                    <option value="새마을금고">새마을금고</option>
+                                    <option value="신협">신협</option>
+                                    <option value="우체국">우체국</option>
+                                    <option value="부산은행">부산은행</option>
+                                    <option value="대구은행">대구은행</option>
+                                    <option value="경남은행">경남은행</option>
+                                    <option value="광주은행">광주은행</option>
+                                    <option value="전북은행">전북은행</option>
+                                    <option value="제주은행">제주은행</option>
+                                </select>
+                            </div>
+                            <div>
+                                <label for="accountNumber" class="block text-sm font-medium text-gray-700 mb-2">계좌번호 *</label>
+                                <input type="text" id="accountNumber" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                       placeholder="123456-78-901234">
+                                <p class="mt-1 text-xs text-gray-500">"-" 포함해서 입력해주세요</p>
+                            </div>
+                            <div>
+                                <label for="accountHolder" class="block text-sm font-medium text-gray-700 mb-2">예금주명 *</label>
+                                <input type="text" id="accountHolder" 
+                                       class="w-full px-4 py-2 border border-gray-300 rounded-lg focus:outline-none focus:ring-2 focus:ring-indigo-500"
+                                       placeholder="홍길동">
+                                <p class="mt-1 text-xs text-gray-500">계좌의 실제 예금주명을 입력해주세요</p>
+                            </div>
+                        </div>
+                    </div>
+
+                    <div class="flex justify-end">
+                        <button id="save-profile-btn" 
+                                class="bg-indigo-600 hover:bg-indigo-700 text-white px-6 py-3 rounded-lg font-medium transition">
+                            💾 저장하기
                         </button>
                     </div>
                 </div>
-            </header>
-
-            <!-- 수익 현황 (4개 카드) -->
-            <section class="mb-10">
-                <h3 class="text-2xl font-semibold text-gray-900 mb-2">이번 달 수익 현황</h3>
-                <p class="text-sm text-gray-600 mb-4">지급 예정일: <span id="payment-date" class="font-semibold text-indigo-600">익월 10일</span></p>
-                <div class="grid grid-cols-1 md:grid-cols-4 gap-6">
-                    <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500">총 판매액</h4>
-                        <p id="current-month-sales" class="mt-2 text-3xl font-bold text-gray-900">₩0</p>
-                    </div>
-                    <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500">총 수익금</h4>
-                        <p id="current-month-commission" class="mt-2 text-3xl font-bold text-blue-600">₩0</p>
-                        <p class="text-xs text-gray-500 mt-1">원천징수 전</p>
-                    </div>
-                    <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500">원천징수 합계</h4>
-                        <p id="current-month-tax" class="mt-2 text-3xl font-bold text-red-600">₩0</p>
-                        <p class="text-xs text-gray-500 mt-1">3.3%</p>
-                    </div>
-                    <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500">최종 정산 예정액</h4>
-                        <p id="current-month-final" class="mt-2 text-3xl font-bold text-green-600">₩0</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- DB 유입 현황 -->
-            <section class="mb-10">
-                <h3 class="text-2xl font-semibold text-gray-900 mb-4">DB 유입 현황</h3>
-                <div class="grid grid-cols-1 md:grid-cols-2 gap-6">
-                    <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500">이번 달 총 DB 유입</h4>
-                        <p id="current-month-db-count" class="mt-2 text-4xl font-bold text-gray-900">0 건</p>
-                        <p id="current-month-db-detail" class="mt-1 text-sm text-gray-500">(승인 0건)</p>
-                    </div>
-                    <div class="bg-white shadow-lg rounded-xl p-6">
-                        <h4 class="text-sm font-medium text-gray-500">누적 총 DB 유입</h4>
-                        <p id="total-db-count" class="mt-2 text-4xl font-bold text-gray-900">0 건</p>
-                        <p id="total-db-detail" class="mt-1 text-sm text-gray-500">(승인 0건)</p>
-                    </div>
-                </div>
-            </section>
-
-            <!-- DB 목록 -->
-            <section>
-                <h3 class="text-2xl font-semibold text-gray-900 mb-4">내 DB 목록 (최신순)</h3>
-                <div class="bg-white shadow-lg rounded-xl overflow-hidden">
-                    <div class="overflow-x-auto">
-                        <table class="min-w-full divide-y divide-gray-200">
-                            <thead class="bg-gray-50">
-                                <tr>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">제출 시간</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">고객 성함</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">판매금액</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">수익금</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">원천징수</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">정산예정액</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">지급예정일</th>
-                                    <th class="px-6 py-3 text-left text-xs font-medium text-gray-500 uppercase tracking-wider">상태</th>
-                                </tr>
-                            </thead>
-                            <tbody id="db-list-tbody" class="bg-white divide-y divide-gray-200">
-                                <tr>
-                                    <td colspan="8" class="px-6 py-8 text-center text-gray-500">아직 유입된 DB가 없습니다.</td>
-                                </tr>
-                            </tbody>
-                        </table>
-                    </div>
-                </div>
-            </section>
+            </div>
         </div>
     </div>
 
@@ -163,7 +302,7 @@
         };
         
         const GAS_URL = "/.netlify/functions/sheets-proxy";
-        const BASE_URL = "https://brandforyou.kr"; // ⭐ 변경!
+        const BASE_URL = "https://brandforyou.kr";
 
         try {
           firebase.initializeApp(firebaseConfig);
@@ -177,6 +316,22 @@
         let currentUser = null;
         let myDbs = [];
         let myReferralCode = null;
+        let userProfile = {};
+
+        // ==================== 탭 전환 ====================
+        document.querySelectorAll('.tab-button').forEach(button => {
+            button.addEventListener('click', () => {
+                const tabName = button.getAttribute('data-tab');
+                
+                // 탭 버튼 활성화
+                document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
+                button.classList.add('active');
+                
+                // 탭 컨텐츠 표시
+                document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
+                document.getElementById(`${tabName}-tab`).classList.add('active');
+            });
+        });
 
         // ==================== 한국 시간 포맷팅 ====================
         function formatKoreanDateTime(dateString) {
@@ -185,7 +340,6 @@
             try {
                 const date = new Date(dateString);
                 
-                // 한국 시간으로 표시
                 return date.toLocaleString('ko-KR', { 
                     timeZone: 'Asia/Seoul',
                     year: 'numeric',
@@ -231,6 +385,7 @@
                     if (doc.exists) {
                         const data = doc.data();
                         myReferralCode = data.referralCode;
+                        userProfile = data;
                         
                         if (!myReferralCode) {
                             showError('referralCode가 설정되지 않았습니다.');
@@ -238,6 +393,13 @@
                         }
                         
                         document.getElementById('ref-link').value = `${BASE_URL}?ref=${myReferralCode}`;
+                        
+                        // 프로필 정보 로드
+                        loadProfileData(data);
+                        
+                        // 프로필 완성도 체크
+                        checkProfileComplete(data);
+                        
                         await loadMyDbs();
                     } else {
                         showError('사용자 정보를 찾을 수 없습니다.');
@@ -248,6 +410,83 @@
                 }
             } else {
                 window.location.href = "index.html";
+            }
+        });
+
+        // ==================== 프로필 정보 로드 ====================
+        function loadProfileData(data) {
+            document.getElementById('fullName').value = data.fullName || '';
+            document.getElementById('phoneNumber').value = data.phoneNumber || '';
+            document.getElementById('bankName').value = data.bankName || '';
+            document.getElementById('accountNumber').value = data.accountNumber || '';
+            document.getElementById('accountHolder').value = data.accountHolder || '';
+        }
+
+        // ==================== 프로필 완성도 체크 ====================
+        function checkProfileComplete(data) {
+            const isComplete = data.fullName && data.phoneNumber && 
+                             data.bankName && data.accountNumber && data.accountHolder;
+            
+            if (!isComplete) {
+                document.getElementById('profile-warning').classList.remove('hidden');
+            } else {
+                document.getElementById('profile-warning').classList.add('hidden');
+            }
+        }
+
+        // ==================== 프로필 저장 ====================
+        document.getElementById('save-profile-btn').addEventListener('click', async () => {
+            const fullName = document.getElementById('fullName').value.trim();
+            const phoneNumber = document.getElementById('phoneNumber').value.trim();
+            const bankName = document.getElementById('bankName').value;
+            const accountNumber = document.getElementById('accountNumber').value.trim();
+            const accountHolder = document.getElementById('accountHolder').value.trim();
+
+            // 유효성 검사
+            if (!fullName) {
+                alert('이름을 입력해주세요.');
+                return;
+            }
+
+            if (!phoneNumber) {
+                alert('연락처를 입력해주세요.');
+                return;
+            }
+
+            if (!bankName) {
+                alert('은행을 선택해주세요.');
+                return;
+            }
+
+            if (!accountNumber) {
+                alert('계좌번호를 입력해주세요.');
+                return;
+            }
+
+            if (!accountHolder) {
+                alert('예금주명을 입력해주세요.');
+                return;
+            }
+
+            try {
+                // Firestore에 저장
+                await db.collection('users').doc(currentUser.uid).update({
+                    fullName: fullName,
+                    phoneNumber: phoneNumber,
+                    bankName: bankName,
+                    accountNumber: accountNumber,
+                    accountHolder: accountHolder,
+                    updatedAt: new Date().toISOString()
+                });
+
+                showSuccess('정보가 저장되었습니다! ✅');
+                
+                // 경고 메시지 숨기기
+                document.getElementById('profile-warning').classList.add('hidden');
+
+            } catch (error) {
+                console.error('저장 실패:', error);
+                alert('정보 저장에 실패했습니다: ' + error.message);
             }
         });
 
@@ -301,7 +540,6 @@
             const currentMonth = now.getMonth();
             const currentYear = now.getFullYear();
 
-            // 이번 달 데이터 계산 (승인일 기준!)
             let currentMonthSales = 0;
             let currentMonthCommission = 0;
             let currentMonthTax = 0;
@@ -309,7 +547,6 @@
             let currentMonthApproved = 0;
             let currentMonthTotal = 0;
 
-            // 누적 데이터 계산
             let totalApproved = 0;
 
             myDbs.forEach(db => {
@@ -319,7 +556,6 @@
                 if (db.status === '승인됨') {
                     totalApproved++;
                     
-                    // 승인일 기준으로 이번 달 데이터 계산
                     if (db.approvedAt) {
                         const approvedDate = new Date(db.approvedAt);
                         const isApprovedThisMonth = approvedDate.getMonth() === currentMonth && approvedDate.getFullYear() === currentYear;
@@ -339,12 +575,10 @@
                 }
             });
 
-            // 지급 예정일 표시 (이번 달 승인 건은 다음 달 10일)
             const paymentDate = new Date(currentYear, currentMonth + 1, 10);
             const paymentDateStr = formatKoreanDate(paymentDate);
             document.getElementById('payment-date').textContent = `${paymentDateStr} (익월 10일)`;
 
-            // UI 업데이트
             document.getElementById('current-month-sales').textContent = `₩${currentMonthSales.toLocaleString()}`;
             document.getElementById('current-month-commission').textContent = `₩${currentMonthCommission.toLocaleString()}`;
             document.getElementById('current-month-tax').textContent = `-₩${currentMonthTax.toLocaleString()}`;
@@ -382,10 +616,8 @@
                 const withholdingTax = db.withholdingTax ? `₩${parseInt(db.withholdingTax).toLocaleString()}` : '₩0';
                 const finalAmount = db.finalAmount ? `₩${parseInt(db.finalAmount).toLocaleString()}` : '₩0';
                 
-                // 제출 시간 - 한국 시간으로 포맷
                 const submittedAt = formatKoreanDateTime(db.submittedAt);
                 
-                // 지급 예정일 계산 (승인일 기준 다음 달 10일)
                 let paymentDateStr = '-';
                 if (db.approvedAt) {
                     const approvedDate = new Date(db.approvedAt);
@@ -414,10 +646,18 @@
             });
         }
 
-        // ==================== 에러 표시 ====================
+        // ==================== 에러/성공 메시지 ====================
         function showError(message) {
             document.getElementById('error-text').textContent = message;
             document.getElementById('error-message').classList.remove('hidden');
+        }
+
+        function showSuccess(message) {
+            document.getElementById('success-text').textContent = message;
+            document.getElementById('success-message').classList.remove('hidden');
+            setTimeout(() => {
+                document.getElementById('success-message').classList.add('hidden');
+            }, 3000);
         }
     </script>
 </body>

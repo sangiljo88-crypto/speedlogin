@@ -13,12 +13,18 @@
         .loader { border-top-color: #3498db; animation: spinner 1.5s linear infinite; }
         @keyframes spinner { 0% { transform: rotate(0deg); } 100% { transform: rotate(360deg); } }
         .modal { display: none; position: fixed; z-index: 50; left: 0; top: 0; width: 100%; height: 100%; overflow: auto; background-color: rgba(0,0,0,0.4); }
-        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 30px; border-radius: 12px; width: 90%; max-width: 800px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
+        .modal-content { background-color: #fefefe; margin: 5% auto; padding: 30px; border-radius: 12px; width: 90%; max-width: 900px; max-height: 85vh; overflow-y: auto; box-shadow: 0 4px 6px rgba(0,0,0,0.1); }
         .tab-button { padding: 12px 24px; font-weight: 500; border-bottom: 2px solid transparent; }
         .tab-button.active { color: #4F46E5; border-bottom-color: #4F46E5; }
         .tab-content { display: none; }
         .tab-content.active { display: block; }
         .paid-row { background-color: #f3f4f6; opacity: 0.7; }
+        .info-card { background: #f9fafb; border: 1px solid #e5e7eb; border-radius: 8px; padding: 16px; margin-bottom: 16px; }
+        .info-row { display: flex; justify-content: space-between; padding: 8px 0; border-bottom: 1px solid #e5e7eb; }
+        .info-row:last-child { border-bottom: none; }
+        .info-label { font-weight: 600; color: #6b7280; }
+        .info-value { color: #111827; }
+        .warning-badge { background: #fef3c7; color: #92400e; padding: 2px 8px; border-radius: 4px; font-size: 12px; }
     </style>
 </head>
 <body class="bg-gray-100">
@@ -178,6 +184,7 @@
         </div>
     </div>
 
+    <!-- 승인 모달 -->
     <div id="approvalModal" class="modal">
         <div class="modal-content">
             <h3 class="text-lg font-bold mb-2">DB 승인 확인</h3>
@@ -223,14 +230,45 @@
         </div>
     </div>
 
+    <!-- 정산 상세 모달 -->
     <div id="settlementDetailModal" class="modal">
         <div class="modal-content">
             <h3 class="text-lg font-bold mb-4">정산 상세 내역</h3>
-            <div class="mb-4">
-                <p class="text-sm text-gray-600">영업 코드: <span id="detailRefCode" class="font-semibold"></span></p>
+            
+            <!-- 영업자 정보 카드 -->
+            <div id="partnerInfoCard" class="info-card mb-4">
+                <h4 class="text-sm font-bold text-gray-700 mb-3">🏦 영업자 정산 정보</h4>
+                <div class="info-row">
+                    <span class="info-label">영업 코드</span>
+                    <span id="detailRefCode" class="info-value font-mono"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">이름</span>
+                    <span id="detailFullName" class="info-value"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">연락처</span>
+                    <span id="detailPhoneNumber" class="info-value"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">은행명</span>
+                    <span id="detailBankName" class="info-value"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">계좌번호</span>
+                    <span id="detailAccountNumber" class="info-value font-mono"></span>
+                </div>
+                <div class="info-row">
+                    <span class="info-label">예금주명</span>
+                    <span id="detailAccountHolder" class="info-value"></span>
+                </div>
             </div>
+
+            <!-- DB 목록 -->
+            <h4 class="text-sm font-bold text-gray-700 mb-2">📋 DB 상세 내역</h4>
             <div id="settlementDetailTable" class="overflow-x-auto">
             </div>
+            
             <div class="flex justify-end gap-2 mt-6">
                 <button id="detailModalCloseBtn" class="px-4 py-2 bg-gray-200 text-gray-700 rounded-lg hover:bg-gray-300 transition">닫기</button>
             </div>
@@ -303,15 +341,12 @@ document.querySelectorAll('.tab-button').forEach(button => {
     button.addEventListener('click', () => {
         const tabName = button.getAttribute('data-tab');
         
-        // 탭 버튼 활성화
         document.querySelectorAll('.tab-button').forEach(btn => btn.classList.remove('active'));
         button.classList.add('active');
         
-        // 탭 컨텐츠 표시
         document.querySelectorAll('.tab-content').forEach(content => content.classList.remove('active'));
         document.getElementById(`${tabName}-tab`).classList.add('active');
 
-        // 탭별 데이터 로드
         if (tabName === 'partners') {
             loadPartnerStats();
         } else if (tabName === 'settlement') {
@@ -324,7 +359,6 @@ document.querySelectorAll('.tab-button').forEach(button => {
 function initializeMonthSelects() {
     const now = new Date();
     
-    // 영업자별 관리 월 선택
     const partnerSelect = document.getElementById('partnerMonth');
     for (let i = 0; i < 6; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -337,7 +371,6 @@ function initializeMonthSelects() {
         partnerSelect.appendChild(option);
     }
     
-    // 월별 정산 관리 월 선택
     const settlementSelect = document.getElementById('settlementMonth');
     for (let i = 0; i < 6; i++) {
         const date = new Date(now.getFullYear(), now.getMonth() - i, 1);
@@ -350,14 +383,13 @@ function initializeMonthSelects() {
         settlementSelect.appendChild(option);
     }
     
-    // 이벤트 리스너
     partnerSelect.addEventListener('change', loadPartnerStats);
     document.getElementById('partnerSearch').addEventListener('input', filterPartnerStats);
     document.getElementById('partnerSort').addEventListener('change', filterPartnerStats);
     settlementSelect.addEventListener('change', loadSettlementData);
 }
 
-// ==================== 파트너 데이터 로드 ====================
+// ==================== 파트너 데이터 로드 (계좌 정보 포함!) ====================
 async function loadPartnersData() {
     try {
         const snapshot = await db.collection('users').where('referralCode', '!=', null).get();
@@ -373,10 +405,15 @@ async function loadPartnersData() {
             const data = doc.data();
             if (!data.referralCode) return;
             
+            // ⭐ 계좌 정보 포함!
             partnersData[data.referralCode] = {
                 id: doc.id,
                 email: data.email,
-                fullName: data.fullName || data.username || '',
+                fullName: data.fullName || '',
+                phoneNumber: data.phoneNumber || '',
+                bankName: data.bankName || '',
+                accountNumber: data.accountNumber || '',
+                accountHolder: data.accountHolder || '',
                 commissionRate: data.commissionRate || 20
             };
 
@@ -612,11 +649,8 @@ async function loadPartnerStats() {
         showPartnerLoading(true);
         hidePartnerError();
 
-        console.log(`📊 영업자별 통계 로드: ${month}`);
         const response = await fetch(`${GAS_URL}?action=getPartnerStats&month=${month}`);
         const result = await response.json();
-
-        console.log('📥 응답:', result);
 
         if (!result.success) {
             throw new Error(result.message || "영업자 데이터를 불러올 수 없습니다.");
@@ -637,14 +671,12 @@ function filterPartnerStats() {
     const searchTerm = document.getElementById('partnerSearch').value.toLowerCase();
     const sortBy = document.getElementById('partnerSort').value;
     
-    // 검색 필터
     let filtered = partnerStats.filter(stat => {
         const refCode = stat.referralCode.toLowerCase();
         const fullName = (partnersData[stat.referralCode]?.fullName || '').toLowerCase();
         return refCode.includes(searchTerm) || fullName.includes(searchTerm);
     });
     
-    // 정렬
     filtered.sort((a, b) => {
         switch(sortBy) {
             case 'sales-desc':
@@ -709,11 +741,8 @@ async function loadSettlementData() {
         showSettlementLoading(true);
         hideSettlementError();
 
-        console.log(`💰 정산 데이터 로드: ${month}`);
         const response = await fetch(`${GAS_URL}?action=getMonthlySettlement&month=${month}`);
         const result = await response.json();
-
-        console.log('📥 응답:', result);
 
         if (!result.success) {
             throw new Error(result.message || "정산 데이터를 불러올 수 없습니다.");
@@ -770,12 +799,32 @@ function renderSettlementTable() {
     document.getElementById('settlementTableContainer').classList.remove('hidden');
 }
 
+// ==================== 정산 상세 모달 (계좌 정보 표시!) ====================
 window.openSettlementDetail = function(refCode) {
     const item = settlementData.find(s => s.referralCode === refCode);
     if (!item) return;
 
+    const partner = partnersData[refCode] || {};
+    
+    // 영업 코드
     document.getElementById('detailRefCode').textContent = refCode;
+    
+    // 이름
+    document.getElementById('detailFullName').innerHTML = partner.fullName || '<span class="warning-badge">미등록</span>';
+    
+    // 연락처
+    document.getElementById('detailPhoneNumber').innerHTML = partner.phoneNumber || '<span class="warning-badge">미등록</span>';
+    
+    // 은행명
+    document.getElementById('detailBankName').innerHTML = partner.bankName || '<span class="warning-badge">미등록</span>';
+    
+    // 계좌번호
+    document.getElementById('detailAccountNumber').innerHTML = partner.accountNumber || '<span class="warning-badge">미등록</span>';
+    
+    // 예금주명
+    document.getElementById('detailAccountHolder').innerHTML = partner.accountHolder || '<span class="warning-badge">미등록</span>';
 
+    // DB 상세 내역
     const tableHtml = `
         <table class="min-w-full divide-y divide-gray-200">
             <thead class="bg-gray-50">
@@ -820,11 +869,9 @@ window.openSettlementDetail = function(refCode) {
     document.getElementById('settlementDetailModal').style.display = 'block';
 };
 
-// ==================== 입금 상태 토글 (즉시 반영!) ====================
+// ==================== 입금 상태 토글 ====================
 window.togglePaymentStatus = async function(rowNumber, checked) {
     const paymentStatus = checked ? '입금완료' : '대기중';
-    
-    console.log(`💳 입금 상태 변경: 행 ${rowNumber} → ${paymentStatus}`);
     
     try {
         const response = await fetch(GAS_URL, {
@@ -839,25 +886,16 @@ window.togglePaymentStatus = async function(rowNumber, checked) {
         });
 
         const result = await response.json();
-        console.log('📥 입금 상태 응답:', result);
 
         if (result.success) {
-            console.log('✅ 입금 상태 업데이트 성공!');
-            
-            // 모달 닫기
             document.getElementById('settlementDetailModal').style.display = 'none';
-            
-            // 성공 메시지
             showSuccess(`입금 상태가 "${paymentStatus}"(으)로 변경되었습니다.`);
-            
-            // 전체 정산 데이터 새로고침
             await loadSettlementData();
-            
         } else {
             throw new Error(result.message || '업데이트 실패');
         }
     } catch (error) {
-        console.error('❌ 입금 상태 업데이트 실패:', error);
+        console.error('입금 상태 업데이트 실패:', error);
         alert('입금 상태 업데이트에 실패했습니다: ' + error.message);
     }
 };
