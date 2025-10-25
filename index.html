@@ -5,6 +5,8 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>파트너 로그인</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
@@ -54,10 +56,7 @@
         </p>
     </div>
 
-    <script type="module">
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, signInWithEmailAndPassword, sendPasswordResetEmail } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-
+    <script>
         // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
@@ -69,9 +68,15 @@
             measurementId: "G-ZG0N9R3LGF"
         };
 
-        // Firebase 앱 초기화
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
+        // Firebase 초기화
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log("✅ Firebase 초기화 성공");
+        } catch (error) {
+            console.error("❌ Firebase 초기화 오류:", error);
+        }
+
+        const auth = firebase.auth();
 
         // DOM 요소
         const loginForm = document.getElementById('login-form');
@@ -95,20 +100,22 @@
 
             try {
                 // 이메일과 비밀번호로 로그인
-                await signInWithEmailAndPassword(auth, email, password);
+                await auth.signInWithEmailAndPassword(email, password);
+                
+                console.log("✅ 로그인 성공:", email);
                 
                 // 관리자와 파트너 구분하여 리다이렉트
                 if (email === ADMIN_EMAIL) {
-                    // 관리자 -> admin.html
+                    console.log("→ 관리자: admin.html로 이동");
                     window.location.href = window.location.origin + '/admin.html';
                 } else {
-                    // 파트너 -> dashboard.html
+                    console.log("→ 파트너: dashboard.html로 이동");
                     window.location.href = window.location.origin + '/dashboard.html';
                 }
 
             } catch (error) {
                 // 에러 처리
-                console.error("Login Error:", error);
+                console.error("❌ 로그인 오류:", error);
                 let errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
                 if (error.code === 'auth/wrong-password' || error.code === 'auth/user-not-found' || error.code === 'auth/invalid-credential') {
                      errorMessage = '이메일 또는 비밀번호가 올바르지 않습니다.';
@@ -131,10 +138,10 @@
             }
 
             try {
-                await sendPasswordResetEmail(auth, email);
+                await auth.sendPasswordResetEmail(email);
                 showMessage('success', `${email} (으)로 비밀번호 재설정 링크를 보냈습니다. 이메일을 확인해 주세요.`);
             } catch (error) {
-                console.error("Password Reset Error:", error);
+                console.error("비밀번호 재설정 오류:", error);
                 showMessage('error', '비밀번호 재설정 이메일 전송에 실패했습니다. 이메일 주소를 확인해 주세요.');
             }
         });

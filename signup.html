@@ -5,6 +5,9 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>파트너 회원가입</title>
     <script src="https://cdn.tailwindcss.com"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-app-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-auth-compat.js"></script>
+    <script src="https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore-compat.js"></script>
     <style>
         body { font-family: 'Inter', sans-serif; }
     </style>
@@ -77,14 +80,8 @@
         </p>
     </div>
 
-    <!-- Firebase SDK -->
-    <script type="module">
-        // Firebase SDK import
-        import { initializeApp } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-app.js";
-        import { getAuth, createUserWithEmailAndPassword } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-auth.js";
-        import { getFirestore, setDoc, doc, collection, query, where, getDocs } from "https://www.gstatic.com/firebasejs/10.12.2/firebase-firestore.js";
-
-        // 사장님의 Firebase 설정 정보
+    <script>
+        // Firebase 설정
         const firebaseConfig = {
             apiKey: "AIzaSyA7eBsXhWAZBvaus9aovVf0GQeMEzvr1R4",
             authDomain: "speedlanding-dc186.firebaseapp.com",
@@ -95,10 +92,16 @@
             measurementId: "G-ZG0N9R3LGF"
         };
 
-        // Firebase 앱 초기화
-        const app = initializeApp(firebaseConfig);
-        const auth = getAuth(app);
-        const db = getFirestore(app);
+        // Firebase 초기화
+        try {
+            firebase.initializeApp(firebaseConfig);
+            console.log("✅ Firebase 초기화 성공");
+        } catch (error) {
+            console.error("❌ Firebase 초기화 오류:", error);
+        }
+
+        const auth = firebase.auth();
+        const db = firebase.firestore();
 
         // DOM 요소
         const signupForm = document.getElementById('signup-form');
@@ -124,9 +127,9 @@
 
             try {
                 // [아이디 중복 확인]
-                const usersRef = collection(db, "users");
-                const q = query(usersRef, where("username", "==", username));
-                const querySnapshot = await getDocs(q);
+                const usersRef = db.collection("users");
+                const q = usersRef.where("referralCode", "==", username);
+                const querySnapshot = await q.get();
 
                 if (!querySnapshot.empty) {
                     // 이미 아이디가 존재함
@@ -134,20 +137,25 @@
                 }
 
                 // 1. Firebase Authentication 계정 생성
-                const userCredential = await createUserWithEmailAndPassword(auth, email, password);
+                const userCredential = await auth.createUserWithEmailAndPassword(email, password);
                 const user = userCredential.user;
 
+                console.log("✅ 계정 생성 성공:", user.uid);
+
                 // 2. Firestore에 영업자 상세 정보 저장 (문서 ID를 Auth UID와 동일하게 설정)
-                const userDocRef = doc(db, "users", user.uid);
-                await setDoc(userDocRef, {
+                await db.collection("users").doc(user.uid).set({
                     uid: user.uid,
                     email: email,
-                    username: username,         // 아이디 (영업 코드)
+                    username: username,         // 아이디
+                    referralCode: username,     // 영업 코드 (중요!)
                     fullName: fullName,         // 성함 (예금주)
                     bankName: bankName,         // 은행명
                     accountNumber: accountNumber, // 계좌번호
+                    commissionRate: 20,         // 기본 수익률 20%
                     createdAt: new Date()
                 });
+
+                console.log("✅ Firestore 저장 성공");
 
                 // 성공 메시지
                 showMessage('success', '회원가입이 완료되었습니다! 3초 후 로그인 페이지로 이동합니다.');
@@ -159,13 +167,12 @@
 
             } catch (error) {
                 // 에러 처리
+                console.error("❌ 회원가입 오류:", error);
                 let errorMessage = '회원가입에 실패했습니다. 입력 정보를 확인해 주세요.';
                 if (error.code === 'auth/email-already-in-use') {
                     errorMessage = '이미 가입된 이메일 주소입니다.';
                 } else if (error.message.includes('아이디')) {
                     errorMessage = error.message; // "이미 사용 중인 아이디(영업 코드)입니다."
-                } else {
-                    console.error("Signup Error:", error);
                 }
                 
                 showMessage('error', errorMessage);
@@ -192,4 +199,3 @@
     </script>
 </body>
 </html>
-
